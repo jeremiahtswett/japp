@@ -1,0 +1,17 @@
+# Per-user local state — never committed (spec §8)
+.env
+profile.yaml
+sources.yaml
+data/
+corpus/
+*.docx
+*.pdf
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.pytest_cache/
+build/
+dist/

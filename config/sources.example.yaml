@@ -1,0 +1,33 @@
+# Which job sources to poll.
+# `japp init` copies this to sources.yaml in the project root — edit THAT copy.
+# sources.yaml is gitignored (it reveals your target-company list).
+#
+# ATS-direct boards are the highest-quality source: the posting appears here
+# the moment it goes live, and the URL is where you actually apply.
+# Finding a company's token/slug: open their careers page and look at job URLs.
+
+greenhouse:
+  # token = slug in https://boards.greenhouse.io/<token> or job-board.../<token>
+  # - "examplecompany"
+  []
+
+lever:
+  # org = slug in https://jobs.lever.co/<org>
+  # - "examplecompany"
+  []
+
+ashby:
+  # org = slug in https://jobs.ashbyhq.com/<org>
+  # - "examplecompany"
+  []
+
+# Broad-market discovery via Adzuna's official API (free key: developer.adzuna.com).
+# Keys go in .env (ADZUNA_APP_ID / ADZUNA_APP_KEY), not here.
+adzuna:
+  enabled: false                  # flip to true once you have keys in .env
+  country: us                     # api country code: us, gb, ca, ...
+  what: "REPLACE ME e.g. product manager"
+  where: "REPLACE ME e.g. Boston"
+  max_days_old: 3
+  results_per_page: 50
+  pages: 2
