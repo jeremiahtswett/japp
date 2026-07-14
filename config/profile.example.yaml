@@ -28,6 +28,15 @@ target_titles:
 # Sam's example:  seniority: "2 years of experience, looking for mid-level roles"
 seniority: "REPLACE ME"
 
+# Years of experience IN THE FIELD you're applying to (corporate roles of the
+# kind in target_titles). Put 0 if you're changing careers — the scorer then
+# prioritizes genuinely entry-level postings you can actually interview for.
+years_of_experience: 0
+
+# Your highest completed education, so degree requirements are judged honestly.
+# Sam's example:  education: "B.S. Economics, University of Illinois"
+education: "REPLACE ME"
+
 # --- WHERE CAN YOU WORK? -----------------------------------------------------
 # Cities you could commute to for non-remote roles. Include the state.
 # Sam's example:
@@ -69,12 +78,16 @@ skills_summary: >-
   REPLACE ME
 
 # --- TUNING KNOBS (the defaults are fine to start) ----------------------------
+# Scoring is deliberately strict: only jobs you could plausibly get an
+# interview for are emailed, and an empty day sends no email at all.
 scoring:
   model: claude-haiku-4-5        # the AI model that scores each job
-  immediate_alert_threshold: 80  # score >= this AND freshly posted -> instant email
-  digest_floor: 60               # score >= this -> included in the daily digest
+  immediate_alert_threshold: 88  # score >= this AND freshly posted -> instant email
+  digest_floor: 80               # score >= this -> included in the daily digest
   freshness_hours: 24            # how recent "freshly posted" means
   max_jd_chars: 8000             # how much of each job description the AI reads
+  max_years_required: 3          # a JD *requiring* more in-field years than this is
+                                 # auto-disqualified ("preferred" years are not)
 
 discovery:
   poll_interval_hours: 2         # how often you plan to run discovery (min 1)

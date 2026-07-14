@@ -24,6 +24,7 @@ A personal job-application pipeline: automated discovery of fresh relevant posti
 
 ## User context
 
-- Single user, technical, comfortable with Python and the command line.
+- Two roles, one instance: the **operator** (repo owner — technical, runs the pipeline and Task Scheduler on their Windows PC) and the **end user** (the operator's brother — non-technical, career-changer seeking a first corporate role, interacts *only* via email from his phone: digest in, `TAILOR <id>` reply out, tailored .docx back).
+- Because the end user never sees a terminal, email-facing text (digests, replies, error messages) must be plain-language and self-explanatory; scoring must be strict enough that every emailed job is worth his time — an empty day sends nothing.
 - Master resume is a single docx/PDF; profile preferences go in `profile.yaml` (scaffold with placeholders, validate on startup).
 - Default daily application cap: 15. Quality over volume.

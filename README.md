@@ -5,9 +5,15 @@ profile with an LLM, and emails you an immediate alert for fresh high matches pl
 daily digest — so you stop checking job sites manually and apply while postings are
 still fresh.
 
-This covers Milestones 1-2 of a larger pipeline (see `spec.md`): discovery + digest,
-and resume tailoring with a bullet-by-bullet diff review. Later milestones add
-assisted submission and outcome tracking.
+This covers Milestones 1-2.5 of a larger pipeline (see `spec.md`): discovery +
+digest, resume tailoring with a bullet-by-bullet diff review, and a reply-by-email
+loop — tap a button in the digest email and the tailored resume comes back to your
+inbox as a .docx. Later milestones add assisted submission and outcome tracking.
+
+Scoring is strict on purpose: it asks "could this person realistically get an
+interview?", auto-disqualifies postings that require years of in-field experience,
+advanced degrees, or niche skills the profile doesn't have, and sends **no email at
+all** on days with no realistic matches. Quality over quantity.
 
 Everything personal — your profile, target companies, API keys, and the job
 database — lives in gitignored local files. The repo itself contains only code and
@@ -49,19 +55,39 @@ templates, so anyone can clone it and run their own copy.
 ## Daily use
 
 ```
+uv run japp inbox      # answer TAILOR replies with tailored resumes
 uv run japp discover   # poll sources, store new deduplicated jobs
 uv run japp score      # filter + LLM-score anything new (costs ~fractions of a cent per job)
 uv run japp digest     # email immediate alerts + the daily digest
-uv run japp run        # all three in order
+uv run japp run        # all four in order (inbox first, so replies are served fastest)
 uv run japp status     # config check + pipeline counts
 ```
 
 Every command accepts `--dry-run` to show what it *would* do — no database writes,
 no API spend, no emails. Try `japp discover --dry-run` first.
 
-## Tailoring a resume for a specific job
+## Reply-by-email tailoring (how the job-seeker uses it)
 
-There's no review-queue UI yet (that's Stage 4), so pick a job by id and tailor it:
+The person receiving the digest never needs a terminal:
+
+1. The digest/alert email lists each matching job with its score, reasons, honest
+   gaps, and two links: **Apply / view posting** and **Tailor my resume for this job**.
+2. Tapping the tailor button opens a pre-addressed reply with subject `TAILOR <id>`.
+   They just hit send.
+3. On its next scheduled run (or `uv run japp inbox`), the pipeline sees the reply,
+   tailors the resume for that job, and emails back `tailored_resume.docx` with the
+   coverage summary in the body and the apply link.
+4. They read it, then apply manually. Nothing is ever submitted on their behalf.
+
+Safety properties: commands are accepted **only** from `DIGEST_TO_EMAIL` (or
+`INBOX_APPROVED_SENDER` if set); strangers never get a reply; each request is
+processed exactly once; a repeated request re-sends the existing resume instead of
+paying for a second tailoring. IMAP uses the same Gmail app password as SMTP — no
+extra setup for Gmail. See `docs/decisions/0006-reply-by-email-approval.md`.
+
+## Tailoring a resume from the command line
+
+The operator can also pick a job by id and tailor it directly:
 
 ```
 uv run japp jobs                 # list scored jobs with their id and score
@@ -84,18 +110,25 @@ they need Stage 4's form detection first.
 
 ## Scheduling
 
-Run `japp run` on a schedule so discovery happens without you:
+Run `japp run` on a schedule so discovery — and answering TAILOR replies — happens
+without you. Hourly is recommended: the schedule cadence is also the maximum wait
+between sending a TAILOR reply and getting the resume back.
 
 - **Windows (Task Scheduler):** create a task that runs
-  `uv run japp run` with "Start in" set to this project folder, every 2 hours.
+  `uv run japp run` with "Start in" set to this project folder, every hour.
   Command line equivalent:
   ```
-  schtasks /Create /TN "japp" /SC HOURLY /MO 2 /TR "cmd /c cd /d C:\path\to\this\folder && uv run japp run"
+  schtasks /Create /TN "japp" /SC HOURLY /MO 1 /TR "cmd /c cd /d C:\path\to\this\folder && uv run japp run"
   ```
+  Note: by default the task only runs while you're logged on, and a sleeping PC
+  pauses it — check "Run whether user is logged on or not" and the power settings
+  if runs are being missed.
 - **macOS/Linux (cron):** `crontab -e` then:
   ```
-  0 */2 * * * cd /path/to/this/folder && uv run japp run
+  0 * * * * cd /path/to/this/folder && uv run japp run
   ```
+- If an hour feels slow for replies, add a second, faster task that runs only
+  `uv run japp inbox` every 15 minutes.
 
 Logs land in `data/logs/japp.log`, so a failed overnight run is diagnosable the next
 morning.
@@ -110,17 +143,19 @@ dedupe ──► SQLite (data/japp.db)   one job = one record across all sources
    ▼
 deterministic filters (free)       title / location / blocklist
    ▼
-LLM scoring (Claude Haiku)         0-100 + reasons + honest gaps
+LLM scoring (Claude Haiku)         0-100, capped by interview-attainability
    ▼
 email: immediate alert (fresh, high score) + daily digest (the rest)
-
-your resume ──► experience corpus (corpus/experience_corpus.yaml, human-editable)
-   ▼                                    │
-`japp jobs` pick an id                  │
-   ▼                                    ▼
-`japp tailor <id>` ──► Claude Opus (reorder/reword/cut, only from the corpus)
+   │        each job: [Tailor my resume for this job] mailto button
+   ▼
+reply "TAILOR <id>"  ──►  `japp inbox` (IMAP poll, approved sender only)
+   ▼
+`japp tailor <id>` ──► Claude Opus (reorder/reword/cut, only from your
+   │                   experience corpus: corpus/experience_corpus.yaml)
    ▼
 tailored_resume.docx + diff_report.md + coverage_summary.md
+   ▼
+emailed back to you  ──►  you apply manually
 ```
 
 Design decisions are documented in `docs/decisions/`. Tests: `uv run pytest`

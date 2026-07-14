@@ -89,7 +89,8 @@ How resume screening actually works, so the tailoring strategy targets reality r
 
 **Goal:** The user reviews the diff, approves, and the application gets submitted with minimal additional human effort.
 
-- **Review queue:** simplest interface that works (CLI, TUI, or a small local web page). Show pending applications, the diff report, approve/reject/edit actions.
+- **Tailoring greenlight (implemented as M2.5, reply-by-email):** the user interacts with the pipeline only via email from their phone. Each job in a digest/alert email carries a one-tap `mailto:` button that pre-fills a `TAILOR <job id>` reply; `japp inbox` polls the pipeline's own mailbox over IMAP, accepts commands only from the approved sender, runs tailoring, and replies with the tailored .docx + coverage summary. The user then applies manually from their phone/computer with the tailored resume in hand. See ADR 0006. This supersedes the CLI/TUI review-queue idea below for the tailoring step; `japp jobs`/`japp tailor` remain as the operator's manual path.
+- **Review queue (for submission, M3):** simplest interface that works (CLI, TUI, or a small local web page). Show pending applications, the diff report, approve/reject/edit actions.
 - **Submission, tiered by feasibility:**
   - **Tier 1 (ATS-direct, e.g., Greenhouse/Lever/Ashby):** these forms are structurally consistent and rarely require accounts. Browser automation (e.g., Playwright) that fills the form from `profile.yaml` + the tailored resume, then pauses on the completed, unsubmitted form for the user to eyeball and click submit. This is the "one-click" experience and where automation effort pays off most.
   - **Tier 2 (account-walled or heavily protected: Workday, LinkedIn Easy Apply, Indeed):** do not fight these. Produce an **application packet** instead: the tailored resume file, prefilled answers ready to paste, and the direct application URL. The user submits manually with everything at their fingertips.
@@ -129,6 +130,7 @@ You should research, decide, and briefly document (an `docs/decisions/` ADR each
 
 - **M1 — Discovery + digest:** sources polled, jobs deduped and stored, relevance-scored, daily email/digest with fresh high-match roles. This alone kills pain point #1 and most of #2.
 - **M2 — Tailoring + diff review:** greenlit jobs produce tailored resume + diff report + coverage summary. Kills pain point #3.
+- **M2.5 — Email approval loop + attainability scoring:** strict interview-attainability scoring (quality over quantity; an empty day sends nothing), and the reply-by-email greenlight: digest → one-tap TAILOR reply → tailored resume mailed back. Makes M2 usable by an email-only user.
 - **M3 — Tier 1 assisted submission:** Playwright fill-and-pause for Greenhouse/Lever/Ashby; application packets for everything else. Kills pain point #4 where feasible.
 - **M4 — Tracking + reporting:** application log and response-rate reporting.
 
@@ -150,6 +152,6 @@ This is a v1 requirement, not a nice-to-have: design the config/scaffolding laye
 
 - Multi-user support; this is a single-user personal tool.
 - Auto-submission without per-application human approval.
-- Inbox parsing for automatic status updates.
+- Inbox parsing for automatic status updates. (Parsing explicit `TAILOR <id>` command replies is in scope — see Stage 4; free-text status detection is not.)
 - Niche/curated job lists (general aggregators and ATS boards only).
 - Referral hunting, networking automation, or any outreach to humans.
