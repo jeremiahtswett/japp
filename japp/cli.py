@@ -78,9 +78,27 @@ def cmd_score(args: argparse.Namespace) -> int:
     return 0
 
 
-def _not_implemented(stage: str) -> int:
-    print(f"`japp {stage}` is not implemented yet.")
-    return 2
+def cmd_digest(args: argparse.Namespace) -> int:
+    from japp.digest.pipeline import run_notifications
+
+    run_notifications(load_config(), dry_run=args.dry_run)
+    return 0
+
+
+def cmd_run(args: argparse.Namespace) -> int:
+    from japp.digest.pipeline import run_notifications
+    from japp.discover import run_discovery
+    from japp.score import run_scoring
+
+    cfg = load_config()
+    run_discovery(cfg, dry_run=args.dry_run)
+    if args.dry_run:
+        # Later stages read the DB, which a dry-run discover didn't write to;
+        # they still show pending work from previous real runs.
+        print("(dry-run: score/digest below reflect previously stored jobs only)")
+    run_scoring(cfg, dry_run=args.dry_run)
+    run_notifications(cfg, dry_run=args.dry_run)
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -111,12 +129,11 @@ def main(argv: list[str] | None = None) -> int:
         "status": cmd_status,
         "discover": cmd_discover,
         "score": cmd_score,
+        "digest": cmd_digest,
+        "run": cmd_run,
     }
-    handler = handlers.get(args.command)
-    if handler is None:
-        return _not_implemented(args.command)
     try:
-        return handler(args)
+        return handlers[args.command](args)
     except ConfigError as e:
         print(f"Config problem: {e}", file=sys.stderr)
         return 1
