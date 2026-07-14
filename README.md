@@ -95,13 +95,24 @@ uv run japp tailor 42 --dry-run   # see what would happen, no API spend
 uv run japp tailor 42             # produce the real artifacts
 ```
 
+Tailoring is a multi-step verified process (see `docs/tailoring-process.md`): the JD
+is analyzed first (top-3 hiring-manager responsibilities + ranked ATS keywords, junk
+excluded), the resume is tailored toward those, and code then verifies every claimed
+keyword placement against the actual text — with bounded retries when a claim fails.
+
 Output lands in `data/tailored/<id>_<company>/`:
-- `tailored_resume.docx` — a clean, single-column resume built only from your
-  experience corpus (never invented content — see `docs/decisions/0005-*.md`)
-- `diff_report.md` — every changed bullet, original vs. tailored, with a one-line
-  reason; cut bullets and any low-confidence rewrites are called out explicitly
-- `coverage_summary.md` — which JD requirements are addressed, and which honestly
-  aren't
+- `tailored_resume.docx` — a dense, single-column serif resume (Times New Roman,
+  section headings with rules, master-style layout) built only from your experience
+  corpus (never invented content — see `docs/decisions/0005-*.md` and `0007-*.md`)
+- `diff_report.md` — the top-3 responsibilities targeted, then every changed bullet,
+  original vs. tailored, with a one-line reason; cut bullets and any low-confidence
+  rewrites are called out explicitly
+- `coverage_summary.md` — which JD requirements are addressed, which honestly
+  aren't, and the ATS keyword table (placed where / verify manually / not placeable)
+- `jd_analysis.json` — the raw JD analysis, for debugging
+
+Note: a repeated inbox request re-sends the artifacts that already exist; after a
+format or process change, regenerate with `uv run japp tailor <id> --force`.
 
 **Read the diff report before using the resume.** Nothing here auto-submits anything
 — that's Stage 4, and it always requires your explicit approval per job. Cover-letter

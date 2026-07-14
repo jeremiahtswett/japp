@@ -40,3 +40,28 @@ bullet gets a cheap word-overlap check against its source bullet — low overlap
 block the bullet, but flags it prominently in the diff report so the human reviewing
 it (the actual approval gate, per ground rule 2) catches anything that drifted too far
 from the source material.
+
+---
+
+## Amendment (2026-07-14): dense serif template replaces the "standardized" look
+
+Live review of a real tailored output rejected the original template: python-docx's
+built-in Heading styles produced blue Calibri headings, entries weren't grouped under
+section titles, there were no divider rules, and default spacing pushed a dense
+one-page master onto 1.5 pages.
+
+The "we don't attempt to preserve the master's visual design" tradeoff above is
+**superseded**: the template now matches the master resume's conventions — Times New
+Roman, all black, bold section headings ("Education", "Work Experience", "Projects",
+"Leadership", "Skills") over a thin horizontal rule, company/location and title/dates
+as two-column lines, single spacing with 0.5" vertical margins. Still generic (spec §8:
+nothing person-specific is hardcoded) and still machine-parseable: the rules are
+paragraph bottom borders and the columns are right tab stops — **no tables, no text
+boxes** (spec Stage 3 unchanged). Built-in Heading styles are avoided entirely; the
+`Normal` and `List Bullet` styles are restyled at the source (including `w:eastAsia`,
+which `font.name` alone doesn't set).
+
+Experience entries render in corpus order (reverse-chronological, as the master was
+written); the model's relevance ordering applies to bullet selection/wording and to
+project/leadership sections. Cost estimate updated in ADR 0007 (the tailoring flow is
+now multi-call).
