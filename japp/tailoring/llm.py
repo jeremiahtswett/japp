@@ -106,9 +106,13 @@ discussions" and the original bullet does not already describe that exact scope,
 delete the phrase - it is fabrication even though it sounds natural and plausible. \
 Reusing the SAME stated facts in different words is fine; implying a broader phase, \
 responsibility, or setting than what's written is not.
-- Terminology alignment: where a corpus bullet describes a genuine skill in \
-different words than the JD, adopt the JD's phrasing in that bullet's tailored_text \
-- only when the underlying skill/experience is actually present in the corpus bullet.
+- Terminology alignment: first identify the JD's key required terms (skills, tools, \
+responsibilities). For every corpus bullet that genuinely evidences one of them in \
+different words, adopt the JD's exact phrasing in that bullet's tailored_text - \
+including matching the JD's acronym or expanded form (e.g. "POS" vs "point of \
+sale"). This is how the resume ranks well in ATS keyword screens without lying. \
+A JD term you cannot trace to a real corpus fact must appear in coverage.gaps, \
+never in a bullet.
 - Prioritization: order "sections" so the most JD-relevant content comes first; \
 reorder bullets within a section the same way.
 - Cutting: set include: false for a whole section that doesn't help, or omit a \
