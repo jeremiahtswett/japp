@@ -65,6 +65,17 @@ MIGRATIONS: list[str] = [
         UNIQUE (job_id, channel, kind)
     );
     """,
+    # 2 — M2 tailoring
+    """
+    CREATE TABLE tailorings (
+        job_id INTEGER PRIMARY KEY REFERENCES jobs(id),
+        output_dir TEXT NOT NULL,
+        model TEXT NOT NULL,
+        input_tokens INTEGER,
+        output_tokens INTEGER,
+        tailored_at TEXT NOT NULL
+    );
+    """,
 ]
 
 
@@ -211,6 +222,50 @@ def record_notification(
                VALUES (?, ?, ?, ?)""",
             (job_id, channel, kind, utcnow_iso()),
         )
+
+
+# ---------------------------------------------------------------------------
+# Tailoring stage
+# ---------------------------------------------------------------------------
+
+def get_job(conn: sqlite3.Connection, job_id: int) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM jobs WHERE id = ?", (job_id,)).fetchone()
+
+
+def get_tailoring(conn: sqlite3.Connection, job_id: int) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM tailorings WHERE job_id = ?", (job_id,)).fetchone()
+
+
+def record_tailoring(
+    conn: sqlite3.Connection,
+    job_id: int,
+    output_dir: str,
+    model: str,
+    input_tokens: int,
+    output_tokens: int,
+) -> None:
+    with conn:
+        conn.execute(
+            """INSERT OR REPLACE INTO tailorings
+               (job_id, output_dir, model, input_tokens, output_tokens, tailored_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (job_id, output_dir, model, input_tokens, output_tokens, utcnow_iso()),
+        )
+
+
+def list_scored_jobs(conn: sqlite3.Connection, min_score: int = 0) -> list[sqlite3.Row]:
+    """Scored (filter-passing) jobs for `japp jobs` - the interim stand-in for a
+    Stage 4 review queue: shows the id you pass to `japp tailor`."""
+    return conn.execute(
+        """SELECT j.id, j.company, j.title, j.location, s.llm_score,
+                  (t.job_id IS NOT NULL) AS tailored
+           FROM jobs j
+           JOIN scores s ON s.job_id = j.id
+           LEFT JOIN tailorings t ON t.job_id = j.id
+           WHERE s.passed_filters = 1 AND s.llm_score >= ?
+           ORDER BY s.llm_score DESC, j.first_seen_at DESC""",
+        (min_score,),
+    ).fetchall()
 
 
 # ---------------------------------------------------------------------------

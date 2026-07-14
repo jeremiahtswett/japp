@@ -83,4 +83,14 @@ discovery:
 notifications:
   digest_hour_local: 8           # hour of day you schedule the digest run for
 
+# Resume tailoring (`japp parse-resume` / `japp tailor`). Tailoring writes real
+# resume content, so it defaults to a stronger model than scoring.
+tailoring:
+  model: claude-opus-4-8         # the AI model that tailors your resume per job
+  low_overlap_threshold: 0.3     # flag a rewritten bullet in the diff report if it
+                                  # shares less than this fraction of words with the
+                                  # original (a safety check, not a hard block)
+  target_bullet_slack: 1.2       # warn in the diff report if the tailored resume has
+                                  # more than this x the original's bullet count
+
 daily_application_cap: 15        # used by later milestones; leave as is

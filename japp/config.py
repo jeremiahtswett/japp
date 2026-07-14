@@ -69,6 +69,13 @@ class NotificationsCfg:
 
 
 @dataclass
+class TailoringCfg:
+    model: str = "claude-opus-4-8"
+    low_overlap_threshold: float = 0.3
+    target_bullet_slack: float = 1.2
+
+
+@dataclass
 class Profile:
     target_titles: list[str]
     seniority: str
@@ -83,6 +90,7 @@ class Profile:
     scoring: ScoringCfg
     discovery: DiscoveryCfg
     notifications: NotificationsCfg
+    tailoring: TailoringCfg
     daily_application_cap: int = 15
 
 
@@ -172,6 +180,7 @@ def load_profile(path: Path) -> Profile:
             scoring=ScoringCfg(**(data.get("scoring") or {})),
             discovery=DiscoveryCfg(**(data.get("discovery") or {})),
             notifications=NotificationsCfg(**(data.get("notifications") or {})),
+            tailoring=TailoringCfg(**(data.get("tailoring") or {})),
             daily_application_cap=int(data.get("daily_application_cap", 15)),
         )
     except (KeyError, TypeError, ValueError) as e:

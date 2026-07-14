@@ -1,7 +1,7 @@
 import json
 from types import SimpleNamespace
 
-from japp.config import DiscoveryCfg, NotificationsCfg, Profile, ScoringCfg
+from japp.config import DiscoveryCfg, NotificationsCfg, Profile, ScoringCfg, TailoringCfg
 from japp.scoring import filters
 from japp.scoring.llm import build_system_prompt, build_user_prompt, score_job
 
@@ -21,6 +21,7 @@ def make_profile(**overrides) -> Profile:
         scoring=ScoringCfg(),
         discovery=DiscoveryCfg(),
         notifications=NotificationsCfg(),
+        tailoring=TailoringCfg(),
     )
     base.update(overrides)
     return Profile(**base)

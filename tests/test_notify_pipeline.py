@@ -2,7 +2,7 @@ import pytest
 
 from japp import db
 from japp.config import (Config, DiscoveryCfg, NotificationsCfg, Profile,
-                         ScoringCfg, SourcesCfg)
+                         ScoringCfg, SourcesCfg, TailoringCfg)
 from japp.digest import pipeline
 from japp.models import Posting, utcnow_iso
 
@@ -14,7 +14,7 @@ def cfg(tmp_path):
         locations=["Boston, MA"], remote_ok=True, hybrid_ok=True, onsite_ok=False,
         work_authorization="US citizen", company_blocklist=[], company_priority=[],
         skills_summary="PM.", scoring=ScoringCfg(), discovery=DiscoveryCfg(),
-        notifications=NotificationsCfg(),
+        notifications=NotificationsCfg(), tailoring=TailoringCfg(),
     )
     env = {"SMTP_HOST": "smtp.test", "SMTP_USER": "u@test", "SMTP_PASSWORD": "pw",
            "DIGEST_TO_EMAIL": "u@test"}
