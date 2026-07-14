@@ -1,33 +1,46 @@
-# Which job sources to poll.
-# `japp init` copies this to sources.yaml in the project root — edit THAT copy.
-# sources.yaml is gitignored (it reveals your target-company list).
+# ============================================================================
+# WHICH JOB SOURCES TO POLL
 #
-# ATS-direct boards are the highest-quality source: the posting appears here
-# the moment it goes live, and the URL is where you actually apply.
-# Finding a company's token/slug: open their careers page and look at job URLs.
+# `japp init` copies this file to sources.yaml in the project root — edit THAT
+# copy. sources.yaml is gitignored (it reveals your job-search targets).
+#
+# There are two ways to use this file — pick either or both:
+#
+#   MODE A — "Show me the newest relevant jobs from ANY company" (simplest)
+#     Leave the three company-board lists empty and just enable adzuna below
+#     with your job title and city. Adzuna searches the broad job market and
+#     this tool re-checks it every run, sorted newest-first, so fresh postings
+#     reach you within hours.
+#
+#   MODE B — "Watch specific companies I care about"
+#     List companies' job boards below. These feeds update the moment a job
+#     goes live and link straight to the real application page. Works great
+#     combined with Mode A.
+# ============================================================================
 
-greenhouse:
-  # token = slug in https://boards.greenhouse.io/<token> or job-board.../<token>
-  # - "examplecompany"
-  []
+# --- MODE B: company job boards (leave as [] if you don't have target companies)
+# To find a company's token: open its careers page and click any job.
+#   URL looks like boards.greenhouse.io/<token>/...  -> put <token> under greenhouse
+#   URL looks like jobs.lever.co/<org>/...           -> put <org> under lever
+#   URL looks like jobs.ashbyhq.com/<org>/...        -> put <org> under ashby
+# Example:
+#   greenhouse:
+#     - "duolingo"
+#     - "figma"
+greenhouse: []
 
-lever:
-  # org = slug in https://jobs.lever.co/<org>
-  # - "examplecompany"
-  []
+lever: []
 
-ashby:
-  # org = slug in https://jobs.ashbyhq.com/<org>
-  # - "examplecompany"
-  []
+ashby: []
 
-# Broad-market discovery via Adzuna's official API (free key: developer.adzuna.com).
-# Keys go in .env (ADZUNA_APP_ID / ADZUNA_APP_KEY), not here.
+# --- MODE A: broad job-market search via Adzuna ------------------------------
+# Free API keys: register at https://developer.adzuna.com/, then put both the
+# Application ID and API key in .env (ADZUNA_APP_ID / ADZUNA_APP_KEY).
 adzuna:
-  enabled: false                  # flip to true once you have keys in .env
-  country: us                     # api country code: us, gb, ca, ...
-  what: "REPLACE ME e.g. product manager"
-  where: "REPLACE ME e.g. Boston"
-  max_days_old: 3
+  enabled: false            # flip to true once your keys are in .env
+  country: us
+  what: "REPLACE ME with your job title, e.g. financial analyst"
+  where: "REPLACE ME with your city, e.g. New York City"
+  max_days_old: 3           # only fetch postings from the last N days
   results_per_page: 50
-  pages: 2
+  pages: 2                  # 2 pages x 50 = up to 100 newest postings per run

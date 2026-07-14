@@ -56,6 +56,7 @@ class AdzunaSource:
                     "where": self.cfg.where,
                     "max_days_old": self.cfg.max_days_old,
                     "results_per_page": self.cfg.results_per_page,
+                    "sort_by": "date",  # newest first — freshness is the point
                     "content-type": "application/json",
                 },
             )
