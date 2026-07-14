@@ -41,10 +41,16 @@ class GreenhouseSource:
         self.board_tokens = board_tokens
 
     def fetch(self, client: PoliteClient) -> list[Posting]:
+        import logging
+
         postings: list[Posting] = []
         for token in self.board_tokens:
-            board = client.get_json(f"{API}/{token}")
-            company = (board.get("name") or token) if isinstance(board, dict) else token
-            payload = client.get_json(f"{API}/{token}/jobs", params={"content": "true"})
-            postings.extend(parse_jobs(token, company, payload))
+            try:
+                board = client.get_json(f"{API}/{token}")
+                company = (board.get("name") or token) if isinstance(board, dict) else token
+                payload = client.get_json(f"{API}/{token}/jobs", params={"content": "true"})
+                postings.extend(parse_jobs(token, company, payload))
+            except Exception:
+                logging.getLogger(__name__).exception(
+                    "greenhouse board %r failed (bad token?); continuing", token)
         return postings

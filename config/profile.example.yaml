@@ -1,50 +1,86 @@
-# Your job-search profile.
-# `japp init` copies this to profile.yaml in the project root — edit THAT copy.
-# profile.yaml is gitignored: it never leaves your machine.
-# Every value containing REPLACE ME must be filled in before the pipeline will run.
+# ============================================================================
+# YOUR JOB-SEARCH PROFILE
+#
+# `japp init` copies this file to profile.yaml in the project root — edit THAT
+# copy, not this one. profile.yaml is gitignored: it never leaves your machine.
+#
+# Every value containing REPLACE ME must be filled in before the pipeline runs
+# (`japp status` will tell you what's still missing). Each field below shows a
+# fully worked example for a fictional job-seeker named Sam so you can see
+# exactly what to write.
+# ============================================================================
 
-# Titles you're targeting, including acceptable variants. Used by the
-# deterministic filter (a posting must roughly match one) and by the LLM scorer.
+# --- WHAT JOBS ARE YOU LOOKING FOR? -----------------------------------------
+# List every job title you'd apply to, including variants. A posting is kept
+# only if its title contains one of these (word order doesn't matter, so
+# "Product Manager" also matches "Senior Product Manager" and "Manager, Product").
+# Sam's example:
+#   target_titles:
+#     - "Data Analyst"
+#     - "Business Analyst"
+#     - "Data Scientist"
 target_titles:
-  - "REPLACE ME e.g. Product Manager"
-  - "REPLACE ME e.g. Senior Product Manager"
-  - "REPLACE ME e.g. Technical Program Manager"
+  - "REPLACE ME"
+  - "REPLACE ME"
 
-# Free text, e.g. "mid to senior, 4-8 years experience"
+# One line describing your level. The AI scorer uses this to judge whether a
+# posting is too junior or too senior for you.
+# Sam's example:  seniority: "2 years of experience, looking for mid-level roles"
 seniority: "REPLACE ME"
 
-# Locations you'd accept for non-remote roles.
+# --- WHERE CAN YOU WORK? -----------------------------------------------------
+# Cities you could commute to for non-remote roles. Include the state.
+# Sam's example:
+#   locations:
+#     - "Chicago, IL"
 locations:
-  - "REPLACE ME e.g. Boston, MA"
+  - "REPLACE ME"
+
+# Would you take a fully remote job? A hybrid one? A fully in-office one?
 remote_ok: true
 hybrid_ok: true
 onsite_ok: false
 
-# One line the scorer can use to judge authorization-related requirements.
-work_authorization: "REPLACE ME e.g. US citizen, no sponsorship needed"
+# One line the scorer can use against visa/authorization requirements in postings.
+# Sam's example:  work_authorization: "US citizen, no sponsorship needed"
+work_authorization: "REPLACE ME"
 
-# Companies to never surface / to prioritize (matched case-insensitively).
+# --- COMPANY PREFERENCES (optional — leave as [] if none) --------------------
+# blocklist: companies you never want to see (e.g. a current employer).
+# priority:  companies you're especially interested in.
+# Sam's example:  company_blocklist: ["Initech"]
 company_blocklist: []
 company_priority: []
 
-# Used by the LLM scorer in M1 (until the resume corpus is parsed in M2).
-# 3-6 honest sentences: your experience, core skills, tools, domains,
-# and what kind of role you want next.
+# --- WHO ARE YOU? (the most important field) ---------------------------------
+# 3-6 honest sentences about your background: education, jobs you've had and
+# what you actually did, your strongest skills and tools, and what kind of role
+# you want next. The AI reads this to score every job — the more specific and
+# truthful, the better the scores. Don't exaggerate: the point is honest matching.
+# Sam's example:
+#   skills_summary: >-
+#     Economics graduate with 2 years as a reporting analyst at a regional bank.
+#     Built monthly revenue dashboards in Tableau, automated Excel reporting with
+#     Python, and ran customer churn analysis in SQL that shaped the retention
+#     program. Strongest in SQL, Excel, Tableau, and basic Python. Looking for a
+#     data or business analyst role at a company where I can grow toward data
+#     science.
 skills_summary: >-
   REPLACE ME
 
+# --- TUNING KNOBS (the defaults are fine to start) ----------------------------
 scoring:
-  model: claude-haiku-4-5
-  immediate_alert_threshold: 80   # score >= this AND fresh -> immediate email
-  digest_floor: 60                # score >= this -> included in daily digest
-  freshness_hours: 24             # "fresh" = posted within this window
-  max_jd_chars: 8000              # JD text is trimmed to this before scoring
+  model: claude-haiku-4-5        # the AI model that scores each job
+  immediate_alert_threshold: 80  # score >= this AND freshly posted -> instant email
+  digest_floor: 60               # score >= this -> included in the daily digest
+  freshness_hours: 24            # how recent "freshly posted" means
+  max_jd_chars: 8000             # how much of each job description the AI reads
 
 discovery:
-  poll_interval_hours: 2          # be a polite client; don't go below 1
-  max_age_days: 14                # ignore postings older than this
+  poll_interval_hours: 2         # how often you plan to run discovery (min 1)
+  max_age_days: 14               # ignore postings older than this
 
 notifications:
-  digest_hour_local: 8            # hour of day the digest run is meant for
+  digest_hour_local: 8           # hour of day you schedule the digest run for
 
-daily_application_cap: 15         # governs M2+; recorded here from the start
+daily_application_cap: 15        # used by later milestones; leave as is

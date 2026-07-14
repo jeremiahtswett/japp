@@ -46,8 +46,14 @@ class AshbySource:
         self.orgs = orgs
 
     def fetch(self, client: PoliteClient) -> list[Posting]:
+        import logging
+
         postings: list[Posting] = []
         for org in self.orgs:
-            payload = client.get_json(f"{API}/{org}")
-            postings.extend(parse_jobs(org, payload))
+            try:
+                payload = client.get_json(f"{API}/{org}")
+                postings.extend(parse_jobs(org, payload))
+            except Exception:
+                logging.getLogger(__name__).exception(
+                    "ashby org %r failed (bad org slug?); continuing", org)
         return postings

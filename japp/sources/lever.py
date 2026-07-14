@@ -60,8 +60,14 @@ class LeverSource:
         self.orgs = orgs
 
     def fetch(self, client: PoliteClient) -> list[Posting]:
+        import logging
+
         postings: list[Posting] = []
         for org in self.orgs:
-            payload = client.get_json(f"{API}/{org}", params={"mode": "json"})
-            postings.extend(parse_jobs(org, payload))
+            try:
+                payload = client.get_json(f"{API}/{org}", params={"mode": "json"})
+                postings.extend(parse_jobs(org, payload))
+            except Exception:
+                logging.getLogger(__name__).exception(
+                    "lever org %r failed (bad org slug?); continuing", org)
         return postings
