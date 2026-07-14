@@ -1,7 +1,9 @@
+import json
 from types import SimpleNamespace
 
-from japp.tailoring.llm import (TailorResult, build_system_prompt, build_user_prompt,
-                                run_tailoring, validate_result)
+from japp.tailoring.llm import (TAILOR_SCHEMA, TailorResult, build_system_prompt,
+                                build_user_prompt, run_tailoring,
+                                tailor_with_verification, validate_result)
 
 
 class StubClient:
@@ -13,11 +15,26 @@ class StubClient:
         self.messages = self
 
     def create(self, **kwargs):
-        import json
-
         self.last_kwargs = kwargs
         return SimpleNamespace(
             content=[SimpleNamespace(type="text", text=json.dumps(self._payload))],
+            usage=SimpleNamespace(input_tokens=4000, output_tokens=1500),
+        )
+
+
+class SequenceStubClient:
+    """Returns payload N on call N; records every call's kwargs."""
+
+    def __init__(self, payloads: list[dict]):
+        self._payloads = payloads
+        self.calls = []
+        self.messages = self
+
+    def create(self, **kwargs):
+        self.calls.append(kwargs)
+        payload = self._payloads[min(len(self.calls) - 1, len(self._payloads) - 1)]
+        return SimpleNamespace(
+            content=[SimpleNamespace(type="text", text=json.dumps(payload))],
             usage=SimpleNamespace(input_tokens=4000, output_tokens=1500),
         )
 
@@ -38,6 +55,31 @@ def test_user_prompt_contains_job_fields_and_trims_jd():
     assert prompt.count("x") == 100
 
 
+def test_system_prompt_states_keyword_placement_contract(sample_corpus):
+    prompt = build_system_prompt(sample_corpus)
+    assert "keyword_placements" in prompt
+    assert "verified in code" in prompt
+
+
+def test_user_prompt_embeds_analysis():
+    analysis = SimpleNamespace(
+        top_responsibilities=[
+            {"responsibility": "Ship pipelines", "why_it_matters": "core"},
+        ],
+        ats_keywords=[{"keyword": "SQL", "rank": 1}, {"keyword": "Tableau", "rank": 2}],
+    )
+    prompt = build_user_prompt("Acme", "Engineer", "Chicago", "jd", max_chars=100,
+                               analysis=analysis)
+    assert "Top 3 responsibilities" in prompt
+    assert "Ship pipelines - core" in prompt
+    assert "1. SQL" in prompt and "2. Tableau" in prompt
+
+
+def test_schema_requires_keyword_placements():
+    assert "keyword_placements" in TAILOR_SCHEMA["properties"]
+    assert "keyword_placements" in TAILOR_SCHEMA["required"]
+
+
 # --- run_tailoring -------------------------------------------------------------
 
 def _payload(**overrides):
@@ -47,6 +89,7 @@ def _payload(**overrides):
             {"ref_bullet_id": "sec-1-b1", "tailored_text": "Built a Python service.", "rationale": "r"},
         ]}],
         "cut_bullets": [],
+        "keyword_placements": [],
         "coverage": {"addressed": ["a"], "gaps": ["g"]},
     }
     base.update(overrides)
@@ -150,6 +193,82 @@ def test_validate_result_cut_bullets_populated_and_unknown_dropped(sample_corpus
     cut = validated["cut_bullets"][0]
     assert cut["section_name"] == "Side Project"
     assert cut["original_text"] == "Created a Flask app for tracking expenses."
+
+
+def test_validate_result_passes_placements_through(sample_corpus):
+    placements = [{"keyword": "Python", "ref_bullet_id": "sec-1-b1", "note": ""}]
+    result = TailorResult(
+        summary_line=None,
+        sections=[{"ref_id": "sec-1", "include": True, "bullets": [
+            {"ref_bullet_id": "sec-1-b1", "tailored_text": "Built a Python service.", "rationale": "r"},
+        ]}],
+        cut_bullets=[], coverage={"addressed": [], "gaps": []},
+        input_tokens=1, output_tokens=1, keyword_placements=placements,
+    )
+    validated = validate_result(sample_corpus, result)
+    assert validated["keyword_placements"] == placements
+
+
+# --- tailor_with_verification (revision loop) ----------------------------------
+
+def _placed_payload(text, keyword, placements):
+    return _payload(
+        sections=[{"ref_id": "sec-1", "include": True, "bullets": [
+            {"ref_bullet_id": "sec-1-b1", "tailored_text": text, "rationale": "r"},
+        ]}],
+        keyword_placements=placements,
+    )
+
+
+def test_no_revision_when_all_placements_verify(sample_corpus):
+    payload = _placed_payload(
+        "Built a Python microservice handling orders.", "Python",
+        [{"keyword": "Python", "ref_bullet_id": "sec-1-b1", "note": ""}])
+    client = SequenceStubClient([payload])
+    validated, usage = tailor_with_verification(
+        client, "m", sample_corpus, "system", "user",
+        low_overlap_threshold=0.3, max_revision_passes=2)
+    assert usage["calls"] == 1
+    assert validated["keyword_verification"]["failed"] == []
+    assert [p["keyword"] for p in validated["keyword_verification"]["placed"]] == ["Python"]
+
+
+def test_revision_loop_retries_then_passes(sample_corpus):
+    bad = _placed_payload(
+        "Built a service for orders.", "Kubernetes",
+        [{"keyword": "Kubernetes", "ref_bullet_id": "sec-1-b1", "note": ""}])
+    good = _placed_payload(
+        "Built a Kubernetes-deployed service for orders.", "Kubernetes",
+        [{"keyword": "Kubernetes", "ref_bullet_id": "sec-1-b1", "note": ""}])
+    client = SequenceStubClient([bad, good])
+    validated, usage = tailor_with_verification(
+        client, "m", sample_corpus, "system", "user",
+        low_overlap_threshold=0.3, max_revision_passes=2)
+    assert usage["calls"] == 2
+    assert validated["keyword_verification"]["failed"] == []
+
+    # Second call continues the same conversation with the model's own JSON
+    # echoed back plus concrete feedback; system prompt identical (cache-safe).
+    first, second = client.calls
+    assert first["system"] == second["system"]
+    msgs = second["messages"]
+    assert [m["role"] for m in msgs] == ["user", "assistant", "user"]
+    assert json.loads(msgs[1]["content"])["sections"]  # the echoed JSON
+    assert "Kubernetes" in msgs[2]["content"] and "sec-1-b1" in msgs[2]["content"]
+
+
+def test_revision_loop_is_bounded_and_reports_honestly(sample_corpus):
+    bad = _placed_payload(
+        "Built a service for orders.", "Kubernetes",
+        [{"keyword": "Kubernetes", "ref_bullet_id": "sec-1-b1", "note": ""}])
+    client = SequenceStubClient([bad])  # always fails
+    validated, usage = tailor_with_verification(
+        client, "m", sample_corpus, "system", "user",
+        low_overlap_threshold=0.3, max_revision_passes=2)
+    assert usage["calls"] == 3  # 1 + 2 revision passes, then stop
+    (f,) = validated["keyword_verification"]["failed"]
+    assert f["keyword"] == "Kubernetes"
+    assert usage["input_tokens"] == 3 * 4000  # summed across calls
 
 
 def test_validate_result_excludes_section_when_include_false(sample_corpus):

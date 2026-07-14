@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import yaml
 
@@ -70,6 +70,30 @@ TAILOR_SCHEMA = {
                 "additionalProperties": False,
             },
         },
+        "keyword_placements": {
+            "type": "array",
+            "description": "One entry per provided ATS keyword",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "keyword": {"type": "string"},
+                    "ref_bullet_id": {
+                        "anyOf": [{"type": "string"}, {"type": "null"}],
+                        "description": (
+                            "the exact bullet id whose tailored_text now contains this "
+                            "keyword; null if it is covered by the skills list or cannot "
+                            "be truthfully placed"
+                        ),
+                    },
+                    "note": {
+                        "type": "string",
+                        "description": "if null: 'in skills' or why it can't be truthfully placed",
+                    },
+                },
+                "required": ["keyword", "ref_bullet_id", "note"],
+                "additionalProperties": False,
+            },
+        },
         "coverage": {
             "type": "object",
             "properties": {
@@ -80,7 +104,7 @@ TAILOR_SCHEMA = {
             "additionalProperties": False,
         },
     },
-    "required": ["summary_line", "sections", "cut_bullets", "coverage"],
+    "required": ["summary_line", "sections", "cut_bullets", "keyword_placements", "coverage"],
     "additionalProperties": False,
 }
 
@@ -121,6 +145,14 @@ Aim for at most {budget} total bullets across all included sections combined - a
 the density of the original resume. Do not add more content than the original had.
 - Never stuff keywords: no keyword lists, no unnatural repetition, nothing that \
 wouldn't read naturally to a human recruiter.
+- Keyword placements: the job message may include a ranked list of ATS keywords. \
+For every keyword you can truthfully evidence, work the JD's exact phrasing into \
+the named bullet's tailored_text and record it in keyword_placements with that \
+bullet's id. A keyword already covered by the skills list gets ref_bullet_id null \
+with note "in skills". A keyword you cannot trace to a real corpus fact gets \
+ref_bullet_id null, an honest note, and belongs in coverage.gaps - never force it \
+into a bullet. Your claimed placements are verified in code against the actual \
+text, so only claim what you actually wrote.
 - Coverage: list JD requirements you can honestly point to a corpus bullet for in \
 "addressed", and requirements the corpus genuinely doesn't support in "gaps". An \
 honest gap is more useful than a stretch - do not inflate "addressed".
@@ -131,12 +163,28 @@ Experience corpus (reference ONLY these exact ids; do not invent new ones):
 {corpus_text}"""
 
 
-def build_user_prompt(company: str, title: str, location: str, jd_text: str, max_chars: int) -> str:
+def build_user_prompt(company: str, title: str, location: str, jd_text: str, max_chars: int,
+                      analysis=None) -> str:
     jd = jd_text[:max_chars]
-    return (
+    prompt = (
         f"Target job:\nCompany: {company}\nTitle: {title}\nLocation: {location or 'unspecified'}\n\n"
         f"Job description:\n{jd}"
     )
+    if analysis is not None:
+        resp_lines = "\n".join(
+            f"{i}. {r['responsibility']} - {r['why_it_matters']}"
+            for i, r in enumerate(analysis.top_responsibilities, start=1)
+        )
+        kw_lines = "\n".join(
+            f"{k['rank']}. {k['keyword']}" for k in analysis.ats_keywords
+        )
+        prompt += (
+            f"\n\nTop 3 responsibilities the hiring manager cares about "
+            f"(tailor bullets toward these):\n{resp_lines}"
+            f"\n\nRanked ATS keywords (place each truthfully per the keyword-placement "
+            f"rule, or mark it unplaceable):\n{kw_lines}"
+        )
+    return prompt
 
 
 @dataclass
@@ -147,27 +195,91 @@ class TailorResult:
     coverage: dict
     input_tokens: int
     output_tokens: int
+    keyword_placements: list[dict] = field(default_factory=list)
+    raw_json: str = ""
 
 
-def run_tailoring(client, model: str, system_prompt: str, user_prompt: str) -> TailorResult:
-    """One structured-output call. `client` is an anthropic.Anthropic (or a test stub)."""
-    response = client.messages.create(
+def _create(client, model: str, system_prompt: str, messages: list[dict]):
+    return client.messages.create(
         model=model,
-        max_tokens=8192,
+        max_tokens=16000,
         system=[{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}],
-        messages=[{"role": "user", "content": user_prompt}],
+        messages=messages,
         output_config={"format": {"type": "json_schema", "schema": TAILOR_SCHEMA}},
     )
+
+
+def _parse(response) -> TailorResult:
     text = next(b.text for b in response.content if b.type == "text")
     data = json.loads(text)
     return TailorResult(
         summary_line=data.get("summary_line"),
         sections=data["sections"],
         cut_bullets=data["cut_bullets"],
+        keyword_placements=data.get("keyword_placements", []),
         coverage=data["coverage"],
         input_tokens=response.usage.input_tokens,
         output_tokens=response.usage.output_tokens,
+        raw_json=text,
     )
+
+
+def run_tailoring(client, model: str, system_prompt: str, user_prompt: str) -> TailorResult:
+    """One structured-output call. `client` is an anthropic.Anthropic (or a test stub)."""
+    return _parse(_create(client, model, system_prompt,
+                          [{"role": "user", "content": user_prompt}]))
+
+
+def _revision_feedback(failed: list[dict]) -> str:
+    lines = []
+    for f in failed:
+        claimed = f" ('{f['tailored_text']}')" if f.get("tailored_text") else ""
+        lines.append(f"- \"{f['keyword']}\" claimed in {f['ref_bullet_id']}{claimed}: "
+                     f"{f['reason']}")
+    return (
+        "Verification failed - these claimed keyword placements do not actually appear "
+        "in the tailored text:\n" + "\n".join(lines) + "\n\n"
+        "For each one: rewrite that bullet to naturally include the keyword ONLY if the "
+        "original corpus bullet truthfully evidences it; otherwise set its "
+        "ref_bullet_id to null with an honest note. Never invent facts. Return the "
+        "complete corrected JSON (all sections and bullets, not just the fixes)."
+    )
+
+
+def tailor_with_verification(
+    client, model: str, corpus: dict, system_prompt: str, user_prompt: str,
+    low_overlap_threshold: float, max_revision_passes: int,
+) -> tuple[dict, dict]:
+    """Tailoring call + code-level keyword verification + bounded revision loop.
+
+    Revisions continue the same conversation (the cached system prompt is
+    reused, and the model sees its own previous output plus only the delta
+    feedback). Returns (validated, usage_totals); the final verification state
+    is attached as validated["keyword_verification"], with any still-failing
+    placements reported honestly rather than retried forever.
+    """
+    from japp.tailoring import keywords as keywords_module
+
+    messages = [{"role": "user", "content": user_prompt}]
+    total_in = total_out = 0
+    calls = 0
+    for attempt in range(1 + max_revision_passes):
+        result = _parse(_create(client, model, system_prompt, messages))
+        calls += 1
+        total_in += result.input_tokens
+        total_out += result.output_tokens
+        validated = validate_result(corpus, result, low_overlap_threshold)
+        verification = keywords_module.verify_placements(
+            validated, corpus, result.keyword_placements)
+        if not verification["failed"] or attempt == max_revision_passes:
+            break
+        log.info("keyword verification failed for %d placement(s); revision pass %d",
+                 len(verification["failed"]), attempt + 1)
+        messages.append({"role": "assistant", "content": result.raw_json})
+        messages.append({"role": "user", "content": _revision_feedback(verification["failed"])})
+
+    validated["keyword_verification"] = verification
+    return validated, {"input_tokens": total_in, "output_tokens": total_out, "calls": calls}
 
 
 def _tokens(text: str) -> set[str]:
@@ -252,6 +364,10 @@ def validate_result(corpus: dict, result: TailorResult, low_overlap_threshold: f
         "sections": validated_sections,
         "excluded_sections": excluded_sections,
         "cut_bullets": cut_bullets,
+        # Passed through untouched: verification (keywords.verify_placements)
+        # classifies bad ids as FAILED so the model gets corrective feedback
+        # instead of a silent drop.
+        "keyword_placements": result.keyword_placements,
         "coverage": result.coverage,
         "total_bullets": sum(len(s["bullets"]) for s in validated_sections),
     }

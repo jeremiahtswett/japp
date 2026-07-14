@@ -76,6 +76,11 @@ class TailoringCfg:
     model: str = "claude-opus-4-8"
     low_overlap_threshold: float = 0.3
     target_bullet_slack: float = 1.2
+    # Bounded retries when a claimed ATS-keyword placement fails code
+    # verification (each pass is one extra model call). 0 disables.
+    max_revision_passes: int = 2
+    # How many ranked ATS keywords the JD analysis extracts.
+    ats_keyword_count: int = 20
 
 
 @dataclass
