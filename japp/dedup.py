@@ -39,7 +39,15 @@ def _clean(text: str) -> str:
 
 
 def normalize_company(company: str) -> str:
-    return _clean(_LEGAL_SUFFIXES.sub("", company.strip()))
+    # Strip stacked legal suffixes ("Evil Corp, Inc." -> "Evil Corp" -> "Evil")
+    # so blocklist entries and source spellings compare equal.
+    name = company.strip()
+    while True:
+        stripped = _LEGAL_SUFFIXES.sub("", name)
+        if stripped == name:
+            break
+        name = stripped
+    return _clean(name)
 
 
 def normalize_title(title: str) -> str:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import shutil
 import sys
 from pathlib import Path
@@ -63,6 +64,20 @@ def cmd_status(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_discover(args: argparse.Namespace) -> int:
+    from japp.discover import run_discovery
+
+    run_discovery(load_config(), dry_run=args.dry_run)
+    return 0
+
+
+def cmd_score(args: argparse.Namespace) -> int:
+    from japp.score import run_scoring
+
+    run_scoring(load_config(), dry_run=args.dry_run)
+    return 0
+
+
 def _not_implemented(stage: str) -> int:
     print(f"`japp {stage}` is not implemented yet.")
     return 2
@@ -89,10 +104,13 @@ def main(argv: list[str] | None = None) -> int:
                        help="show what would happen without writing/sending/spending")
 
     args = parser.parse_args(argv)
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
     handlers = {
         "init": cmd_init,
         "status": cmd_status,
+        "discover": cmd_discover,
+        "score": cmd_score,
     }
     handler = handlers.get(args.command)
     if handler is None:
