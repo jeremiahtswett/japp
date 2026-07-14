@@ -32,6 +32,8 @@ def run_notifications(cfg: Config, dry_run: bool = False) -> dict[str, int]:
             purpose="email notifications",
         )
 
+    reply_to = cfg.env.get("SMTP_USER") or "you@example.com"
+
     sent_immediate = 0
     sent_digest = 0
     with db.connect(cfg.db_path) as conn:
@@ -42,7 +44,7 @@ def run_notifications(cfg: Config, dry_run: bool = False) -> dict[str, int]:
         for job in candidates:
             if not _is_fresh(job, fresh_cutoff):
                 continue
-            subject, text, html = render_immediate(job)
+            subject, text, html = render_immediate(job, reply_to)
             if dry_run:
                 print(f"--- would send immediate alert: {subject}\n{text}")
             else:
@@ -55,7 +57,7 @@ def run_notifications(cfg: Config, dry_run: bool = False) -> dict[str, int]:
             conn, kind="digest", min_score=scoring.digest_floor
         )
         if digest_jobs:
-            subject, text, html = render_digest(digest_jobs, now.strftime("%Y-%m-%d"))
+            subject, text, html = render_digest(digest_jobs, now.strftime("%Y-%m-%d"), reply_to)
             if dry_run:
                 print(f"--- would send digest: {subject}\n{text}")
             else:
