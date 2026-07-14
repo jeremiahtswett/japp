@@ -105,7 +105,8 @@ def cmd_jobs(args: argparse.Namespace) -> int:
         return 0
     for r in rows:
         mark = " [tailored]" if r["tailored"] else ""
-        print(f"  {r['id']:>5}  [{r['llm_score']:>3}]  {r['company']} - {r['title']} "
+        att = f" att={r['attainability_score']}" if r["attainability_score"] is not None else ""
+        print(f"  {r['id']:>5}  [{r['llm_score']:>3}{att}]  {r['company']} - {r['title']} "
               f"({r['location'] or 'n/a'}){mark}")
     return 0
 

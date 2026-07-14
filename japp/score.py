@@ -71,9 +71,11 @@ def run_scoring(cfg: Config, dry_run: bool = False) -> dict[str, int]:
                 db.record_llm_score(
                     conn, job["id"], result.overall, result.reasons, result.gaps,
                     scoring_cfg.model, result.input_tokens, result.output_tokens,
+                    attainability=result.attainability,
                 )
                 scored += 1
-                log.info("scored %s - %s: %d", job["company"], job["title"], result.overall)
+                log.info("scored %s - %s: %d (attainability %d)",
+                         job["company"], job["title"], result.overall, result.attainability)
 
         print(f"score: {rejected} filter-rejected, {scored} LLM-scored")
         return {"rejected": rejected, "scored": scored}

@@ -117,12 +117,14 @@ def test_score_job_parses_structured_output():
         "fit_score": 82,
         "desire_score": 90,
         "overall": 85,
+        "attainability_score": 88,
         "reasons": ["exact title match", "B2B SaaS background fits", "extra reason", "dropped"],
         "gaps": ["no healthcare domain experience"],
     }
     client = StubClient(payload)
     result = score_job(client, "claude-haiku-4-5", "system", "user")
     assert result.overall == 85
+    assert result.attainability == 88
     assert result.reasons == ["exact title match", "B2B SaaS background fits", "extra reason"]
     assert result.gaps == ["no healthcare domain experience"]
     assert result.input_tokens == 3200
@@ -135,17 +137,31 @@ def test_score_job_parses_structured_output():
 
 def test_score_job_clamps_out_of_range():
     client = StubClient({"fit_score": 120, "desire_score": -5, "overall": 101,
-                         "reasons": ["r1", "r2"], "gaps": []})
+                         "attainability_score": 150, "reasons": ["r1", "r2"], "gaps": []})
     result = score_job(client, "m", "s", "u")
     assert (result.fit_score, result.desire_score, result.overall) == (100, 0, 100)
+    assert result.attainability == 100
+
+
+def test_attainability_caps_overall_in_code():
+    client = StubClient({"fit_score": 90, "desire_score": 95, "overall": 90,
+                         "attainability_score": 0,
+                         "reasons": ["requires 7 years required experience"], "gaps": []})
+    result = score_job(client, "m", "s", "u")
+    assert result.overall == 0
+    assert result.attainability == 0
 
 
 def test_prompts_contain_profile_and_jd():
-    p = make_profile()
+    p = make_profile(years_of_experience=0, education="B.A., Boston College")
     system = build_system_prompt(p)
     assert "Product Manager" in system
     assert "B2B SaaS" in system
     assert "Never assume" in system
+    assert "B.A., Boston College" in system
+    assert "0 year(s)" in system
+    assert f"more than {p.scoring.max_years_required} years" in system
+    assert "attainability" in system.lower()
 
     user = build_user_prompt("Acme", "PM", "Boston", "x" * 10_000, max_chars=8000)
     assert user.count("x") == 8000

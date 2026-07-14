@@ -277,7 +277,7 @@ def list_scored_jobs(conn: sqlite3.Connection, min_score: int = 0) -> list[sqlit
     """Scored (filter-passing) jobs for `japp jobs` - the interim stand-in for a
     Stage 4 review queue: shows the id you pass to `japp tailor`."""
     return conn.execute(
-        """SELECT j.id, j.company, j.title, j.location, s.llm_score,
+        """SELECT j.id, j.company, j.title, j.location, s.llm_score, s.attainability_score,
                   (t.job_id IS NOT NULL) AS tailored
            FROM jobs j
            JOIN scores s ON s.job_id = j.id
