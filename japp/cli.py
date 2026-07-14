@@ -125,12 +125,23 @@ def cmd_digest(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_inbox(args: argparse.Namespace) -> int:
+    from japp.inbox.pipeline import run_inbox
+
+    run_inbox(load_config(), dry_run=args.dry_run)
+    return 0
+
+
 def cmd_run(args: argparse.Namespace) -> int:
     from japp.digest.pipeline import run_notifications
     from japp.discover import run_discovery
+    from japp.inbox.pipeline import run_inbox
     from japp.score import run_scoring
 
     cfg = load_config()
+    # Inbox first: a TAILOR reply waiting since the last run is served before
+    # the slow discovery pass, keeping reply-to-resume latency at one cycle.
+    run_inbox(cfg, dry_run=args.dry_run)
     run_discovery(cfg, dry_run=args.dry_run)
     if args.dry_run:
         # Later stages read the DB, which a dry-run discover didn't write to;
@@ -175,7 +186,8 @@ def main(argv: list[str] | None = None) -> int:
         ("discover", "poll sources, dedupe, store new jobs"),
         ("score", "run deterministic filters + LLM scoring on unscored jobs"),
         ("digest", "send immediate alerts and/or the daily digest"),
-        ("run", "full pipeline: discover -> score -> digest"),
+        ("inbox", "poll email for TAILOR replies and send back tailored resumes"),
+        ("run", "full pipeline: inbox -> discover -> score -> digest"),
     ]:
         p = sub.add_parser(name, help=help_text)
         p.add_argument("--dry-run", action="store_true",
@@ -202,6 +214,7 @@ def main(argv: list[str] | None = None) -> int:
         "discover": cmd_discover,
         "score": cmd_score,
         "digest": cmd_digest,
+        "inbox": cmd_inbox,
         "run": cmd_run,
         "parse-resume": cmd_parse_resume,
         "jobs": cmd_jobs,
