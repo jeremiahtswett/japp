@@ -1,0 +1,247 @@
+<meta charset="utf-8">
+<title>japp — Setup Guide</title>
+<style>
+  body { font-family: Georgia, "Times New Roman", serif; max-width: 46em;
+         margin: 2em auto; padding: 0 1.5em; line-height: 1.55; color: #1a1a1a; }
+  h1 { font-size: 1.9em; border-bottom: 3px solid #1a1a1a; padding-bottom: .2em; }
+  h2 { font-size: 1.35em; margin-top: 1.8em; border-bottom: 1px solid #999; padding-bottom: .15em; }
+  h3 { font-size: 1.05em; margin-top: 1.3em; }
+  code, pre { font-family: Consolas, "Courier New", monospace; background: #f4f4f4;
+              border: 1px solid #ddd; border-radius: 4px; }
+  code { padding: .1em .35em; font-size: .92em; }
+  pre { padding: .8em 1em; overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+  .tip { background: #eef6ee; border-left: 4px solid #2e7d32; padding: .6em 1em; margin: 1em 0; }
+  .warn { background: #fdf3e7; border-left: 4px solid #b26a00; padding: .6em 1em; margin: 1em 0; }
+  .step { font-weight: bold; }
+  li { margin: .35em 0; }
+  @media print {
+    body { margin: 0 auto; font-size: 11pt; }
+    .tip, .warn { break-inside: avoid; }
+    pre { break-inside: avoid; }
+    h2 { break-after: avoid; }
+  }
+</style>
+
+<h1>japp — Complete Setup Guide</h1>
+<p><i>Set up your own automated job-search assistant, from a blank laptop to daily
+job emails. No coding experience needed. Budget about an hour, mostly for creating
+accounts.</i></p>
+
+<h2>What you're setting up</h2>
+<p>japp runs quietly on your laptop and does four things:</p>
+<ol>
+  <li><b>Finds jobs for you.</b> Every hour it checks job boards for newly posted
+      roles that match what you're looking for.</li>
+  <li><b>Filters hard.</b> An AI reads every posting and only keeps jobs you could
+      realistically get an interview for. No spam — on a day with nothing good,
+      you get no email at all.</li>
+  <li><b>Emails you the good ones.</b> Each email shows the job, why it matched,
+      what's honestly missing, and two buttons: one to view the posting, one that
+      says <b>"Tailor my resume for this job."</b></li>
+  <li><b>Tailors your resume on request.</b> Tap that button, hit send on the
+      reply it opens, and within the hour a version of <i>your</i> resume tailored
+      to that exact job lands back in your inbox as a Word file. Everything in it
+      comes from your real experience — the AI is not allowed to make things up.
+      You read it, then apply.</li>
+</ol>
+
+<h3>What it costs</h3>
+<ul>
+  <li><b>Anthropic API credits</b> (the AI): $5–10 lasts weeks. Scoring a job costs
+      fractions of a cent; tailoring a resume about 25 cents.</li>
+  <li>Everything else — the code, the tools, Gmail — is free.</li>
+</ul>
+
+<div class="tip"><b>Your safety net for every step below:</b> once you finish
+Part 2, you'll have <b>Claude Code</b> installed — an AI assistant that runs on
+your laptop and can see this project. If you get stuck <i>anywhere</i>, open the
+japp folder in Claude Code and type what's wrong in plain English ("I got this
+error when I ran uv sync", "help me fill in profile.yaml"). It will walk you
+through it.</div>
+
+<h2>Part 1 — Install the tools (one time, ~10 minutes)</h2>
+
+<p class="step">Step 1.1 — Open a terminal.</p>
+<p>Press the <b>Windows key</b>, type <code>powershell</code>, press Enter. A blue
+or black window opens where you type commands. (Mac: open the
+<b>Terminal</b> app.) Keep it open for all of Part 1.</p>
+
+<p class="step">Step 1.2 — Install Python.</p>
+<pre>winget install Python.Python.3.12</pre>
+<p>Press Enter and wait for it to finish. (Mac: install from
+<a href="https://www.python.org/downloads/">python.org/downloads</a>.)</p>
+
+<p class="step">Step 1.3 — Install uv (the tool that runs the project).</p>
+<pre>winget install astral-sh.uv</pre>
+<p>(Mac: <code>brew install uv</code>.)</p>
+
+<p class="step">Step 1.4 — Install Claude Code (your AI helper).</p>
+<p>Go to <a href="https://claude.com/claude-code">claude.com/claude-code</a> and
+follow the install instructions for your computer. You'll sign in with a Claude
+account — create one if you don't have it (the free account works; you'll add
+API credits separately in Part 3).</p>
+
+<p class="step">Step 1.5 — Close the terminal and open a new one.</p>
+<p>This makes the newly installed tools available. Quick check — type:</p>
+<pre>uv --version</pre>
+<p>If a version number appears, Part 1 is done.</p>
+
+<h2>Part 2 — Get the code (~5 minutes)</h2>
+
+<p class="step">Step 2.1 — Download it.</p>
+<ol>
+  <li>Go to <a href="https://github.com/jeremiahtswett/japp">github.com/jeremiahtswett/japp</a></li>
+  <li>Click the green <b>&lt;&gt; Code</b> button → <b>Download ZIP</b></li>
+  <li>Open your Downloads folder, right-click <code>japp-main.zip</code> →
+      <b>Extract All…</b></li>
+  <li>Move the extracted <code>japp-main</code> folder somewhere permanent, e.g.
+      your <b>Documents</b> folder. You can rename it to just <code>japp</code>.</li>
+</ol>
+
+<p class="step">Step 2.2 — Point your terminal at the folder.</p>
+<p>In a new terminal, type <code>cd </code> (with a space), then drag the japp
+folder from File Explorer onto the terminal window, and press Enter. Or type the
+path directly:</p>
+<pre>cd "$HOME\Documents\japp"</pre>
+<div class="tip">Every command in the rest of this guide is typed in a terminal
+that's "in" this folder. If you close the terminal, just repeat this step.</div>
+
+<p class="step">Step 2.3 — Install the project's dependencies.</p>
+<pre>uv sync</pre>
+
+<p class="step">Step 2.4 — Create your personal config files.</p>
+<pre>uv run japp init</pre>
+<p>This creates three files you'll fill in during Parts 3 and 4:
+<code>profile.yaml</code>, <code>sources.yaml</code>, and <code>.env</code>.
+They stay on your laptop only — they're never uploaded anywhere.</p>
+
+<h2>Part 3 — Create accounts and keys (~20 minutes)</h2>
+
+<h3>3A. Anthropic API key (the AI that scores jobs and tailors your resume)</h3>
+<ol>
+  <li>Go to <a href="https://console.anthropic.com">console.anthropic.com</a> and
+      sign in (same Claude account from Step 1.4 works).</li>
+  <li>Click <b>Billing</b> → add a payment method → buy <b>$10</b> of credits.
+      (You can turn off auto-reload.)</li>
+  <li>Click <b>API Keys</b> → <b>Create Key</b> → name it <code>japp</code> →
+      <b>copy the key immediately</b> (it starts with <code>sk-ant-</code> and is
+      only shown once).</li>
+</ol>
+
+<h3>3B. Gmail App Password (lets japp send and read email for you)</h3>
+<p>japp emails <i>you</i> from <i>your own</i> Gmail account, and reads the
+"tailor my resume" replies you send back. It needs a special app password —
+<b>not</b> your normal password:</p>
+<ol>
+  <li>Go to <a href="https://myaccount.google.com/security">myaccount.google.com/security</a></li>
+  <li>Turn on <b>2-Step Verification</b> if it isn't already (required).</li>
+  <li>Go to <a href="https://myaccount.google.com/apppasswords">myaccount.google.com/apppasswords</a>
+      (or search "app passwords" in the account settings search bar).</li>
+  <li>App name: <code>japp</code> → <b>Create</b> → copy the 16-character password
+      (ignore the spaces).</li>
+</ol>
+
+<h3>3C. Adzuna (free, optional but recommended — broad job-board search)</h3>
+<ol>
+  <li>Register at <a href="https://developer.adzuna.com">developer.adzuna.com</a>
+      (free).</li>
+  <li>Copy your <b>Application ID</b> and <b>Application Key</b> from the dashboard.</li>
+</ol>
+
+<h3>3D. Put all the keys in the .env file</h3>
+<p>In File Explorer, open the japp folder and double-click <code>.env</code>
+(choose Notepad if asked; if you don't see it, enable View → Show → File name
+extensions and Hidden items). Fill in:</p>
+<pre>ANTHROPIC_API_KEY=sk-ant-...your key from 3A...
+
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=youraddress@gmail.com
+SMTP_PASSWORD=...the 16-character app password from 3B, no spaces...
+DIGEST_TO_EMAIL=youraddress@gmail.com
+
+ADZUNA_APP_ID=...from 3C...
+ADZUNA_APP_KEY=...from 3C...</pre>
+<div class="warn"><b>SMTP_USER and DIGEST_TO_EMAIL are both your own Gmail
+address.</b> japp sends the job emails from your account to your account, and
+only accepts "tailor" requests coming from that same address — nobody else can
+trigger anything.</div>
+
+<h2>Part 4 — Tell it about you (~15 minutes)</h2>
+
+<p class="step">Step 4.1 — Fill in profile.yaml.</p>
+<p>Open <code>profile.yaml</code> from the japp folder in Notepad. Every field has
+instructions and a worked example right above it. Replace every
+<code>REPLACE ME</code>. The important ones:</p>
+<ul>
+  <li><code>target_titles</code> — every job title you'd apply to, e.g.
+      "Data Analyst", "Marketing Coordinator", "HR Coordinator".</li>
+  <li><code>locations</code> — e.g. "New York, NY" and "Boston, MA".</li>
+  <li><code>years_of_experience</code> — years of experience <i>in the field
+      you're applying to</i>. Changing careers? Put <code>0</code> — the AI then
+      hunts for genuinely entry-level roles you can actually land.</li>
+  <li><code>education</code> — e.g. "B.A., Boston College".</li>
+  <li><code>skills_summary</code> — a few honest sentences about what you've
+      actually done. Managing a store counts: hiring, scheduling, inventory,
+      marketing, customer service — write it plainly. <b>Don't exaggerate</b>;
+      honest matching is the whole point.</li>
+</ul>
+
+<p class="step">Step 4.2 — Fill in sources.yaml.</p>
+<p>Open <code>sources.yaml</code>. Easiest start: set <code>adzuna → enabled:
+true</code> and set its <code>what</code>/<code>where</code> to your role and
+city. You can also list specific companies' job boards — the comments in the
+file show how.</p>
+
+<p class="step">Step 4.3 — Drop in your resume.</p>
+<p>Copy your resume (one <code>.docx</code> or <code>.pdf</code> file) into the
+<code>corpus</code> folder inside japp. Then run:</p>
+<pre>uv run japp parse-resume</pre>
+<p>This reads your resume into <code>corpus\experience_corpus.yaml</code> — the
+complete list of facts the resume-tailor is allowed to use. Open that file and
+check it: fix anything it misread, and add extra truthful bullet points that
+didn't fit on your resume (more material = better tailoring).</p>
+
+<p class="step">Step 4.4 — Check everything.</p>
+<pre>uv run japp status</pre>
+<p>It tells you exactly what's still missing. When it prints <b>Config OK</b>,
+do the first real run:</p>
+<pre>uv run japp run</pre>
+<p>First run takes a few minutes. If good matches exist, the digest email arrives.</p>
+
+<h2>Part 5 — Make it run every hour automatically</h2>
+<p>One command (still in the japp folder). It creates a Windows scheduled task
+that runs japp hourly while you're logged in:</p>
+<pre>schtasks /Create /TN "japp" /SC HOURLY /MO 1 /TR "cmd /c cd /d %CD% &amp;&amp; uv run japp run"</pre>
+<div class="warn">A sleeping laptop pauses the schedule. If your emails seem to
+stop, your laptop was probably asleep or off — it catches up on the next run.
+Plug it in and set Settings → Power → "make my device sleep" to Never (when
+plugged in) for best results.</div>
+
+<h2>Your daily routine (the whole point)</h2>
+<ol>
+  <li>A <b>[japp]</b> email arrives when there's a job worth your time. No email =
+      nothing good today = the system is working, not broken.</li>
+  <li>Read the match reasons and the honest gaps. Interested? Tap
+      <b>"Tailor my resume for this job."</b> Your mail app opens a pre-written
+      reply — just hit <b>Send</b>.</li>
+  <li>Within the hour, a reply arrives with <code>tailored_resume.docx</code>
+      attached and a summary of which job requirements it covers (and which it
+      honestly doesn't).</li>
+  <li><b>Read the resume before using it.</b> It's built only from your real
+      experience, but you are the final check.</li>
+  <li>Tap the apply link in the original email and submit with your tailored
+      resume. Done.</li>
+</ol>
+
+<h2>If something breaks</h2>
+<ul>
+  <li>Open the japp folder in <b>Claude Code</b> and describe the problem in
+      plain English. It can read the project, the logs
+      (<code>data\logs\japp.log</code>), and this guide.</li>
+  <li><code>uv run japp status</code> diagnoses most config problems and tells
+      you what to fix.</li>
+  <li>Every command can be tested safely with <code>--dry-run</code> added at the
+      end — it shows what would happen without sending anything or spending
+      anything.</li>
+</ul>
