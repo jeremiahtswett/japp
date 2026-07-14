@@ -1,4 +1,23 @@
+from types import SimpleNamespace
+
 import pytest
+
+
+@pytest.fixture
+def sample_analysis():
+    """A JDAnalysis-shaped object (attribute access like the real dataclass)."""
+    return SimpleNamespace(
+        top_responsibilities=[
+            {"responsibility": "Own the reporting pipeline", "why_it_matters": "core deliverable"},
+            {"responsibility": "Partner with stakeholders", "why_it_matters": "cross-team role"},
+            {"responsibility": "Improve data quality", "why_it_matters": "trust in numbers"},
+        ],
+        ats_keywords=[
+            {"keyword": "SQL", "rank": 1},
+            {"keyword": "Python", "rank": 2},
+            {"keyword": "REST APIs", "rank": 3},
+        ],
+    )
 
 
 @pytest.fixture
@@ -79,6 +98,28 @@ def sample_validated():
              "original_text": "Created a Flask app for tracking expenses.",
              "rationale": "not relevant to this JD"},
         ],
+        "keyword_placements": [
+            {"keyword": "REST APIs", "ref_bullet_id": "sec-1-b1", "note": ""},
+            {"keyword": "SQL", "ref_bullet_id": None, "note": "in skills"},
+            {"keyword": "Kubernetes", "ref_bullet_id": None,
+             "note": "no corpus evidence of container work"},
+        ],
+        "keyword_verification": {
+            "placed": [
+                {"keyword": "REST APIs", "ref_bullet_id": "sec-1-b1", "where": "bullet",
+                 "snippet": "Built a Python microservice handling 10k orders/day via REST APIs."},
+                {"keyword": "SQL", "ref_bullet_id": None, "where": "skills",
+                 "snippet": "Python, SQL, Flask"},
+            ],
+            "failed": [
+                {"keyword": "dashboards", "ref_bullet_id": "sec-1-b2",
+                 "reason": "keyword does not appear in that bullet's tailored text",
+                 "tailored_text": "Wrote SQL queries to analyze customer churn."},
+            ],
+            "unplaced": [
+                {"keyword": "Kubernetes", "note": "no corpus evidence of container work"},
+            ],
+        },
         "coverage": {
             "addressed": ["REST API experience - matched via sec-1-b1"],
             "gaps": ["No Kubernetes experience shown"],

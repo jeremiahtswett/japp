@@ -15,8 +15,15 @@ def _section_header(sec: dict) -> str:
     return sec["name"] if not sec.get("title") else f"{sec['name']} - {sec['title']}"
 
 
-def render_diff_report(corpus: dict, validated: dict, target_bullet_slack: float = 1.2) -> str:
+def render_diff_report(corpus: dict, validated: dict, target_bullet_slack: float = 1.2,
+                       analysis=None) -> str:
     lines = ["# Tailoring diff report", ""]
+
+    if analysis is not None and analysis.top_responsibilities:
+        lines.append("## Top 3 responsibilities targeted")
+        for i, r in enumerate(analysis.top_responsibilities, start=1):
+            lines.append(f"{i}. {r['responsibility']} — {r['why_it_matters']}")
+        lines.append("")
 
     if validated.get("summary_line"):
         lines += [
@@ -70,4 +77,23 @@ def render_coverage_report(validated: dict) -> str:
     lines += ["", "## Honest gaps (job wants this; resume doesn't show it)"]
     lines += [f"- {g}" for g in coverage["gaps"]] or ["- (no gaps identified)"]
     lines.append("")
+
+    verification = validated.get("keyword_verification")
+    if verification is not None:
+        lines += ["## ATS keywords"]
+        for p in verification["placed"]:
+            if p["where"] == "skills":
+                lines.append(f"- ✅ \"{p['keyword']}\" — in skills list")
+            else:
+                lines.append(f"- ✅ \"{p['keyword']}\" → {p['ref_bullet_id']}: "
+                             f"\"{p['snippet']}\"")
+        for f in verification["failed"]:
+            lines.append(f"- ⚠ \"{f['keyword']}\" — claimed in {f['ref_bullet_id']} but "
+                         f"not found after revisions; verify manually")
+        for u in verification["unplaced"]:
+            note = f": {u['note']}" if u.get("note") else ""
+            lines.append(f"- ✗ \"{u['keyword']}\" — not placeable{note}")
+        if not any(verification.values()):
+            lines.append("- (no keywords were provided)")
+        lines.append("")
     return "\n".join(lines)

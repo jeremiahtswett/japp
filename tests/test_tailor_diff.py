@@ -60,3 +60,22 @@ def test_coverage_report_handles_empty_lists():
     report = render_coverage_report(validated)
     assert "(none identified)" in report
     assert "(no gaps identified)" in report
+    assert "ATS keywords" not in report  # old-shape dict still renders (back-compat)
+
+
+def test_diff_report_top_responsibilities_header(sample_corpus, sample_validated, sample_analysis):
+    report = render_diff_report(sample_corpus, sample_validated, analysis=sample_analysis)
+    assert "Top 3 responsibilities targeted" in report
+    assert "1. Own the reporting pipeline — core deliverable" in report
+
+    without = render_diff_report(sample_corpus, sample_validated)
+    assert "Top 3 responsibilities" not in without
+
+
+def test_coverage_report_ats_keyword_section(sample_validated):
+    report = render_coverage_report(sample_validated)
+    assert "## ATS keywords" in report
+    assert '✅ "REST APIs" → sec-1-b1' in report
+    assert '✅ "SQL" — in skills list' in report
+    assert '⚠ "dashboards" — claimed in sec-1-b2 but not found' in report
+    assert '✗ "Kubernetes" — not placeable: no corpus evidence of container work' in report

@@ -3,6 +3,7 @@ diff report, and coverage summary (spec Stage 3)."""
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 
@@ -11,7 +12,8 @@ from japp import db
 from japp.config import Config, ConfigError
 from japp.tailoring import diff as diff_module
 from japp.tailoring import docx_render
-from japp.tailoring.llm import build_system_prompt, build_user_prompt, run_tailoring, validate_result
+from japp.tailoring.analysis import run_jd_analysis
+from japp.tailoring.llm import build_system_prompt, build_user_prompt, tailor_with_verification
 
 log = logging.getLogger(__name__)
 
@@ -68,16 +70,19 @@ def run_tailor(cfg: Config, job_id: int, dry_run: bool = False, force: bool = Fa
                   f"(use --force to re-tailor)")
             return
 
+        tailoring_cfg = cfg.profile.tailoring
         system_prompt = build_system_prompt(corpus)
-        user_prompt = build_user_prompt(
-            job["company"], job["title"], job["location"], job["jd_text"],
-            max_chars=cfg.profile.scoring.max_jd_chars,
-        )
 
         if dry_run:
-            approx_tokens = len(system_prompt + user_prompt) // 4
+            base_prompt = build_user_prompt(
+                job["company"], job["title"], job["location"], job["jd_text"],
+                max_chars=cfg.profile.scoring.max_jd_chars,
+            )
+            approx_tokens = len(system_prompt + base_prompt) // 4
             print(f"would tailor: {job['company']} - {job['title']} "
-                  f"(~{approx_tokens} input tokens, model {cfg.profile.tailoring.model})")
+                  f"(~{approx_tokens} input tokens/call, model {tailoring_cfg.model})")
+            print(f"  1 JD-analysis call + 1 tailoring call + up to "
+                  f"{tailoring_cfg.max_revision_passes} verification revision pass(es)")
             print("dry-run: no API call made, no files written")
             return
 
@@ -85,23 +90,39 @@ def run_tailor(cfg: Config, job_id: int, dry_run: bool = False, force: bool = Fa
         import anthropic
 
         client = anthropic.Anthropic(api_key=cfg.env["ANTHROPIC_API_KEY"])
-        result = run_tailoring(client, cfg.profile.tailoring.model, system_prompt, user_prompt)
-        validated = validate_result(corpus, result, cfg.profile.tailoring.low_overlap_threshold)
+        analysis = run_jd_analysis(
+            client, tailoring_cfg.model, job["company"], job["title"], job["jd_text"],
+            keyword_count=tailoring_cfg.ats_keyword_count,
+            max_chars=cfg.profile.scoring.max_jd_chars,
+        )
+        user_prompt = build_user_prompt(
+            job["company"], job["title"], job["location"], job["jd_text"],
+            max_chars=cfg.profile.scoring.max_jd_chars, analysis=analysis,
+        )
+        validated, usage = tailor_with_verification(
+            client, tailoring_cfg.model, corpus, system_prompt, user_prompt,
+            tailoring_cfg.low_overlap_threshold, tailoring_cfg.max_revision_passes,
+        )
 
         out_dir = cfg.home / "data" / "tailored" / f"{job_id}_{_slug(job['company'])}"
         out_dir.mkdir(parents=True, exist_ok=True)
         docx_render.render_resume(corpus, validated, out_dir / "tailored_resume.docx")
         (out_dir / "diff_report.md").write_text(
-            diff_module.render_diff_report(corpus, validated, cfg.profile.tailoring.target_bullet_slack),
+            diff_module.render_diff_report(corpus, validated, tailoring_cfg.target_bullet_slack,
+                                           analysis=analysis),
             encoding="utf-8",
         )
         (out_dir / "coverage_summary.md").write_text(
             diff_module.render_coverage_report(validated), encoding="utf-8",
         )
+        (out_dir / "jd_analysis.json").write_text(
+            json.dumps(analysis.to_dict(), indent=2), encoding="utf-8",
+        )
 
         db.record_tailoring(
-            conn, job_id, str(out_dir), cfg.profile.tailoring.model,
-            result.input_tokens, result.output_tokens,
+            conn, job_id, str(out_dir), tailoring_cfg.model,
+            analysis.input_tokens + usage["input_tokens"],
+            analysis.output_tokens + usage["output_tokens"],
         )
 
     log.info("tailored job %s (%s - %s) -> %s", job_id, job["company"], job["title"], out_dir)

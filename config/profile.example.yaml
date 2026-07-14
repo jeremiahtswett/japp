@@ -105,5 +105,10 @@ tailoring:
                                   # original (a safety check, not a hard block)
   target_bullet_slack: 1.2       # warn in the diff report if the tailored resume has
                                   # more than this x the original's bullet count
+  ats_keyword_count: 20          # how many ranked ATS keywords to extract from each JD
+  max_revision_passes: 2         # retries when a claimed keyword placement fails code
+                                  # verification; each pass is one extra model call.
+                                  # Keywords that can't be truthfully placed are
+                                  # reported as gaps, never forced in.
 
 daily_application_cap: 15        # used by later milestones; leave as is
