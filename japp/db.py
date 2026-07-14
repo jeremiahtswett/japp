@@ -76,6 +76,25 @@ MIGRATIONS: list[str] = [
         tailored_at TEXT NOT NULL
     );
     """,
+    # 3 — M2.5 attainability scoring + reply-by-email approval loop
+    """
+    ALTER TABLE scores ADD COLUMN attainability_score INTEGER;
+
+    CREATE TABLE email_requests (
+        id INTEGER PRIMARY KEY,
+        uidvalidity INTEGER NOT NULL,
+        uid INTEGER NOT NULL,
+        from_addr TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        command TEXT,
+        job_id INTEGER,
+        status TEXT NOT NULL,
+        detail TEXT,
+        received_at TEXT,
+        processed_at TEXT NOT NULL,
+        UNIQUE (uidvalidity, uid)
+    );
+    """,
 ]
 
 
@@ -181,14 +200,15 @@ def record_llm_score(
     model: str,
     input_tokens: int,
     output_tokens: int,
+    attainability: int | None = None,
 ) -> None:
     with conn:
         conn.execute(
             """INSERT OR REPLACE INTO scores
-               (job_id, passed_filters, llm_score, reasons_json, gaps_json,
-                model, input_tokens, output_tokens, scored_at)
-               VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?)""",
-            (job_id, score, json.dumps(reasons), json.dumps(gaps),
+               (job_id, passed_filters, llm_score, attainability_score,
+                reasons_json, gaps_json, model, input_tokens, output_tokens, scored_at)
+               VALUES (?, 1, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (job_id, score, attainability, json.dumps(reasons), json.dumps(gaps),
              model, input_tokens, output_tokens, utcnow_iso()),
         )
 
@@ -269,6 +289,43 @@ def list_scored_jobs(conn: sqlite3.Connection, min_score: int = 0) -> list[sqlit
 
 
 # ---------------------------------------------------------------------------
+# Inbox stage (reply-by-email approval loop)
+# ---------------------------------------------------------------------------
+
+def email_request_seen(conn: sqlite3.Connection, uidvalidity: int, uid: int) -> bool:
+    row = conn.execute(
+        "SELECT 1 FROM email_requests WHERE uidvalidity = ? AND uid = ?",
+        (uidvalidity, uid),
+    ).fetchone()
+    return row is not None
+
+
+def record_email_request(
+    conn: sqlite3.Connection,
+    uidvalidity: int,
+    uid: int,
+    from_addr: str,
+    subject: str,
+    command: str | None,
+    job_id: int | None,
+    status: str,
+    detail: str | None = None,
+    received_at: str | None = None,
+) -> None:
+    """Record a processed inbox message. INSERT OR IGNORE: a message is
+    recorded exactly once, even on error, so it is never retried forever."""
+    with conn:
+        conn.execute(
+            """INSERT OR IGNORE INTO email_requests
+               (uidvalidity, uid, from_addr, subject, command, job_id,
+                status, detail, received_at, processed_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (uidvalidity, uid, from_addr, subject, command, job_id,
+             status, detail, received_at, utcnow_iso()),
+        )
+
+
+# ---------------------------------------------------------------------------
 # Status
 # ---------------------------------------------------------------------------
 
@@ -282,4 +339,5 @@ def summary(conn: sqlite3.Connection) -> list[str]:
         f"scored (LLM)   : {one('SELECT COUNT(*) FROM scores WHERE passed_filters = 1')}",
         f"filter-rejected: {one('SELECT COUNT(*) FROM scores WHERE passed_filters = 0')}",
         f"notified       : {one('SELECT COUNT(*) FROM notifications')}",
+        f"email requests : {one('SELECT COUNT(*) FROM email_requests')}",
     ]

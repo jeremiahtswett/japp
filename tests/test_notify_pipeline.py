@@ -37,12 +37,12 @@ def test_fresh_high_match_goes_immediate_and_not_digest_again(cfg, monkeypatch):
     monkeypatch.setattr(pipeline, "send_email", lambda env, s, t, h: sent.append(s))
 
     add_scored_job(cfg, score=90, posted_at=utcnow_iso())          # fresh + high
-    add_scored_job(cfg, score=65, posted_at=utcnow_iso(),          # digest-only
+    add_scored_job(cfg, score=82, posted_at=utcnow_iso(),          # digest-only
                    title="Product Manager, Growth", url_suffix="2")
 
     result = pipeline.run_notifications(cfg)
     assert result == {"immediate": 1, "digest": 1}
-    assert len(sent) == 2  # one alert + one digest (containing only the 65)
+    assert len(sent) == 2  # one alert + one digest (containing only the 82)
     assert any(s.startswith("[japp 90]") for s in sent)
     digest_subject = next(s for s in sent if "Daily digest" in s)
     assert "1 matching job" in digest_subject
@@ -61,6 +61,15 @@ def test_stale_high_match_lands_in_digest_not_immediate(cfg, monkeypatch):
     result = pipeline.run_notifications(cfg)
     assert result == {"immediate": 0, "digest": 1}
     assert len(sent) == 1 and "Daily digest" in sent[0]
+
+
+def test_only_sub_floor_scores_sends_nothing(cfg, monkeypatch):
+    sent = []
+    monkeypatch.setattr(pipeline, "send_email", lambda env, s, t, h: sent.append(s))
+
+    add_scored_job(cfg, score=79, posted_at=utcnow_iso())  # below digest_floor=80
+    assert pipeline.run_notifications(cfg) == {"immediate": 0, "digest": 0}
+    assert sent == []
 
 
 def test_dry_run_sends_and_records_nothing(cfg, monkeypatch, capsys):

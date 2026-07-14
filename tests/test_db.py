@@ -87,3 +87,51 @@ def test_filter_reject_recorded(conn):
 def test_migrations_are_versioned(conn):
     version = conn.execute("SELECT version FROM schema_version").fetchone()[0]
     assert version == len(db.MIGRATIONS)
+
+
+def test_v2_db_with_scores_migrates_to_v3(tmp_path):
+    # Build a version-2 database by hand, insert a score row, then connect.
+    import sqlite3
+
+    path = tmp_path / "old.db"
+    raw = sqlite3.connect(path)
+    for script in db.MIGRATIONS[:2]:
+        raw.executescript(script)
+    raw.execute("CREATE TABLE schema_version (version INTEGER NOT NULL)")
+    raw.execute("INSERT INTO schema_version (version) VALUES (2)")
+    raw.execute(
+        """INSERT INTO jobs (fingerprint, canonical_url, canonical_source, company,
+                             title, first_seen_at, last_seen_at)
+           VALUES ('fp', 'u', 'greenhouse', 'Acme', 'PM', 't', 't')"""
+    )
+    raw.execute(
+        "INSERT INTO scores (job_id, passed_filters, llm_score, scored_at) VALUES (1, 1, 70, 't')"
+    )
+    raw.commit()
+    raw.close()
+
+    conn = db.connect(path)
+    row = conn.execute("SELECT attainability_score FROM scores WHERE job_id = 1").fetchone()
+    assert row["attainability_score"] is None
+    assert conn.execute("SELECT version FROM schema_version").fetchone()[0] == len(db.MIGRATIONS)
+    conn.close()
+
+
+def test_llm_score_stores_attainability(conn):
+    job_id, _ = db.upsert_posting(conn, posting())
+    db.record_llm_score(conn, job_id, 85, ["r"], ["g"], "m", 1, 1, attainability=40)
+    row = conn.execute("SELECT * FROM scores WHERE job_id = ?", (job_id,)).fetchone()
+    assert row["attainability_score"] == 40
+
+
+def test_email_request_recorded_once(conn):
+    assert not db.email_request_seen(conn, 111, 5)
+    db.record_email_request(conn, 111, 5, "bro@x.com", "TAILOR 3", "tailor", 3, "done")
+    db.record_email_request(conn, 111, 5, "bro@x.com", "TAILOR 3", "tailor", 3, "error",
+                            detail="should be ignored")
+    assert db.email_request_seen(conn, 111, 5)
+    rows = conn.execute("SELECT * FROM email_requests").fetchall()
+    assert len(rows) == 1
+    assert rows[0]["status"] == "done"
+    # A different uidvalidity is a different message.
+    assert not db.email_request_seen(conn, 222, 5)

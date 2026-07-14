@@ -51,10 +51,13 @@ def load_dotenv(path: Path) -> dict[str, str]:
 @dataclass
 class ScoringCfg:
     model: str = "claude-haiku-4-5"
-    immediate_alert_threshold: int = 80
-    digest_floor: int = 60
+    immediate_alert_threshold: int = 88
+    digest_floor: int = 80
     freshness_hours: int = 24
     max_jd_chars: int = 8000
+    # JDs that *require* more in-field years than this are disqualified
+    # (attainability 0). "Preferred" years are a gap, not a disqualifier.
+    max_years_required: int = 3
 
 
 @dataclass
@@ -92,6 +95,10 @@ class Profile:
     notifications: NotificationsCfg
     tailoring: TailoringCfg
     daily_application_cap: int = 15
+    # In-field corporate experience in years (0 for a career changer) and
+    # highest completed education — both feed the attainability scoring.
+    years_of_experience: int = 0
+    education: str = ""
 
 
 @dataclass
@@ -182,6 +189,8 @@ def load_profile(path: Path) -> Profile:
             notifications=NotificationsCfg(**(data.get("notifications") or {})),
             tailoring=TailoringCfg(**(data.get("tailoring") or {})),
             daily_application_cap=int(data.get("daily_application_cap", 15)),
+            years_of_experience=int(data.get("years_of_experience", 0)),
+            education=str(data.get("education", "")),
         )
     except (KeyError, TypeError, ValueError) as e:
         raise ConfigError(f"profile.yaml is malformed: {e}") from e
@@ -189,7 +198,8 @@ def load_profile(path: Path) -> Profile:
     _check_placeholders(
         "profile.yaml",
         profile.target_titles + profile.locations
-        + [profile.seniority, profile.work_authorization, profile.skills_summary],
+        + [profile.seniority, profile.work_authorization, profile.skills_summary,
+           profile.education],
     )
     if not profile.target_titles:
         raise ConfigError("profile.yaml: target_titles must list at least one title.")
