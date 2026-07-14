@@ -101,6 +101,26 @@ def cmd_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def _setup_logging() -> None:
+    """Console + rotating file log, so overnight scheduled runs are diagnosable."""
+    handlers: list[logging.Handler] = [logging.StreamHandler()]
+    try:
+        from logging.handlers import RotatingFileHandler
+
+        log_dir = home_dir() / "data" / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        handlers.append(RotatingFileHandler(
+            log_dir / "japp.log", maxBytes=1_000_000, backupCount=5, encoding="utf-8",
+        ))
+    except OSError:
+        pass  # unwritable home (e.g. read-only checkout): console logging still works
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+        handlers=handlers,
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="japp",
@@ -122,7 +142,7 @@ def main(argv: list[str] | None = None) -> int:
                        help="show what would happen without writing/sending/spending")
 
     args = parser.parse_args(argv)
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    _setup_logging()
 
     handlers = {
         "init": cmd_init,
