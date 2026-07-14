@@ -96,6 +96,16 @@ an employer, title, date, degree, metric, skill, or accomplishment that isn't \
 already in the corpus.
 
 Rules:
+- "Emphasize" means changing which EXISTING fact is foregrounded, or leading with an \
+outcome that's already stated - it does NOT mean adding a new claim about scope, \
+phase, or setting. Before writing tailored_text, check: is every noun phrase in my \
+rewrite traceable to a word or clear synonym in the original bullet? If you find \
+yourself writing stock resume phrases like "end-to-end ownership," "concept to \
+launch" / "concept through launch," "production workflow," or "technical design \
+discussions" and the original bullet does not already describe that exact scope, \
+delete the phrase - it is fabrication even though it sounds natural and plausible. \
+Reusing the SAME stated facts in different words is fine; implying a broader phase, \
+responsibility, or setting than what's written is not.
 - Terminology alignment: where a corpus bullet describes a genuine skill in \
 different words than the JD, adopt the JD's phrasing in that bullet's tailored_text \
 - only when the underlying skill/experience is actually present in the corpus bullet.

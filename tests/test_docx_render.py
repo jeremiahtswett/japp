@@ -41,3 +41,16 @@ def test_render_resume_creates_parent_dir(tmp_path, sample_corpus, sample_valida
     out_path = tmp_path / "nested" / "dir" / "resume.docx"
     render_resume(sample_corpus, sample_validated, out_path)
     assert out_path.exists()
+
+
+def test_education_with_empty_detail_has_no_stray_dash(tmp_path, sample_corpus, sample_validated):
+    corpus = dict(sample_corpus)
+    corpus["education"] = corpus["education"] + [
+        {"id": "edu-2", "institution": "MIT (Cross-Registered)", "detail": "",
+         "dates": "2022-Present", "highlights": []},
+    ]
+    out_path = tmp_path / "resume.docx"
+    render_resume(corpus, sample_validated, out_path)
+    text = _all_text(Document(str(out_path)))
+    assert "MIT (Cross-Registered) (2022-Present)" in text
+    assert "MIT (Cross-Registered) - " not in text

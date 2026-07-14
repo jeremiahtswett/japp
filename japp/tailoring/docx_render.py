@@ -57,7 +57,9 @@ def render_resume(corpus: dict, validated: dict, output_path: Path) -> None:
     if corpus.get("education"):
         doc.add_heading("Education", level=2)
         for edu in corpus["education"]:
-            line = f"{edu['institution']} - {edu['detail']}"
+            line = edu["institution"]
+            if edu.get("detail"):
+                line += f" - {edu['detail']}"
             if edu.get("dates"):
                 line += f" ({edu['dates']})"
             doc.add_paragraph(line)
