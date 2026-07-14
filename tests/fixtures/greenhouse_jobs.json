@@ -1,0 +1,24 @@
+{
+  "jobs": [
+    {
+      "id": 4014120004,
+      "internal_job_id": 123,
+      "absolute_url": "https://boards.greenhouse.io/acme/jobs/4014120004?gh_src=example",
+      "location": { "name": "Boston, MA" },
+      "updated_at": "2026-07-11T09:12:00-04:00",
+      "first_published": "2026-07-10T08:00:00-04:00",
+      "title": "Senior Product Manager",
+      "content": "&lt;p&gt;Own the roadmap &amp;amp; ship.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;5+ years of product experience&lt;/li&gt;&lt;/ul&gt;"
+    },
+    {
+      "id": 4014120005,
+      "internal_job_id": 124,
+      "absolute_url": "https://boards.greenhouse.io/acme/jobs/4014120005",
+      "location": { "name": "Remote - US" },
+      "updated_at": "2026-07-12T00:00:00Z",
+      "title": "Technical Program Manager",
+      "content": "&lt;div&gt;Drive cross-functional programs.&lt;/div&gt;"
+    }
+  ],
+  "meta": { "total": 2 }
+}

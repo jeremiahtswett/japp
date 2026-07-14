@@ -1,0 +1,28 @@
+[
+  {
+    "id": "abc-123",
+    "text": "Product Manager, Growth",
+    "createdAt": 1783814400000,
+    "hostedUrl": "https://jobs.lever.co/examplecorp/abc-123",
+    "applyUrl": "https://jobs.lever.co/examplecorp/abc-123/apply",
+    "workplaceType": "hybrid",
+    "categories": {
+      "location": "Boston, MA",
+      "team": "Product",
+      "commitment": "Full-time"
+    },
+    "description": "<div>Lead growth <b>experiments</b>.</div>",
+    "descriptionPlain": "Lead growth experiments."
+  },
+  {
+    "id": "def-456",
+    "text": "Technical Program Manager",
+    "createdAt": 1783900800000,
+    "hostedUrl": "https://jobs.lever.co/examplecorp/def-456",
+    "workplaceType": "remote",
+    "categories": {
+      "location": "United States"
+    },
+    "description": "<p>Coordinate launches &amp; releases.</p>"
+  }
+]

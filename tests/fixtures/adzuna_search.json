@@ -1,0 +1,24 @@
+{
+  "count": 2,
+  "mean": 145000,
+  "results": [
+    {
+      "id": "5001",
+      "title": "Senior <strong>Product Manager</strong>",
+      "company": { "display_name": "Acme Inc" },
+      "location": { "area": ["US", "Massachusetts", "Suffolk County", "Boston"] },
+      "created": "2026-07-12T06:15:00Z",
+      "redirect_url": "https://www.adzuna.com/details/5001?utm_source=api",
+      "description": "Acme is hiring a Senior Product Manager to own the roadmap ..."
+    },
+    {
+      "id": "5002",
+      "title": "Program Manager",
+      "company": { "display_name": "Globex" },
+      "location": { "area": ["US", "Massachusetts", "Cambridge"] },
+      "created": "2026-07-11T22:00:00Z",
+      "redirect_url": "https://www.adzuna.com/details/5002",
+      "description": "Globex seeks a Program Manager ..."
+    }
+  ]
+}
