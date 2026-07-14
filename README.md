@@ -125,21 +125,21 @@ Run `japp run` on a schedule so discovery — and answering TAILOR replies — h
 without you. Hourly is recommended: the schedule cadence is also the maximum wait
 between sending a TAILOR reply and getting the resume back.
 
-- **Windows (Task Scheduler):** create a task that runs
-  `uv run japp run` with "Start in" set to this project folder, every hour.
-  Command line equivalent:
+- **Windows (Task Scheduler):** two tasks — the full pipeline hourly, plus a
+  lightweight inbox check every 10 minutes so tailor replies turn around fast
+  (the check is free; the AI only runs when a request is waiting):
   ```
   schtasks /Create /TN "japp" /SC HOURLY /MO 1 /TR "cmd /c cd /d C:\path\to\this\folder && uv run japp run"
+  schtasks /Create /TN "japp-inbox" /SC MINUTE /MO 10 /TR "cmd /c cd /d C:\path\to\this\folder && uv run japp inbox"
   ```
-  Note: by default the task only runs while you're logged on, and a sleeping PC
-  pauses it — check "Run whether user is logged on or not" and the power settings
-  if runs are being missed.
+  Note: by default tasks only run while you're logged on, and a sleeping PC
+  pauses them — check "Run whether user is logged on or not" and the power
+  settings if runs are being missed. No terminal window needs to stay open.
 - **macOS/Linux (cron):** `crontab -e` then:
   ```
   0 * * * * cd /path/to/this/folder && uv run japp run
+  */10 * * * * cd /path/to/this/folder && uv run japp inbox
   ```
-- If an hour feels slow for replies, add a second, faster task that runs only
-  `uv run japp inbox` every 15 minutes.
 
 Logs land in `data/logs/japp.log`, so a failed overnight run is diagnosable the next
 morning.

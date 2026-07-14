@@ -209,10 +209,24 @@ do the first real run:</p>
 <pre>uv run japp run</pre>
 <p>First run takes a few minutes. If good matches exist, the digest email arrives.</p>
 
-<h2>Part 5 — Make it run every hour automatically</h2>
-<p>One command (still in the japp folder). It creates a Windows scheduled task
-that runs japp hourly while you're logged in:</p>
+<h2>Part 5 — Make it run automatically (two commands)</h2>
+<p>Two commands, typed in the terminal while it's in the japp folder. They create
+two Windows scheduled tasks that run in the background — <b>no terminal window
+needs to stay open</b>, you just need to be logged in.</p>
+
+<p class="step">Task 1 — the full job search, every hour:</p>
 <pre>schtasks /Create /TN "japp" /SC HOURLY /MO 1 /TR "cmd /c cd /d %CD% &amp;&amp; uv run japp run"</pre>
+
+<p class="step">Task 2 — check for your "tailor my resume" replies, every 10 minutes:</p>
+<pre>schtasks /Create /TN "japp-inbox" /SC MINUTE /MO 10 /TR "cmd /c cd /d %CD% &amp;&amp; uv run japp inbox"</pre>
+<p>This second task is what makes the tailor button feel fast: when you tap it,
+your tailored resume comes back within about 10 minutes instead of waiting for
+the next hourly run. Checking the mailbox is free — the AI only does work (and
+costs anything) when a request is actually waiting.</p>
+
+<p>To confirm both tasks exist: <code>schtasks /Query /TN "japp"</code> and
+<code>schtasks /Query /TN "japp-inbox"</code>.</p>
+
 <div class="warn">A sleeping laptop pauses the schedule. If your emails seem to
 stop, your laptop was probably asleep or off — it catches up on the next run.
 Plug it in and set Settings → Power → "make my device sleep" to Never (when
@@ -225,7 +239,7 @@ plugged in) for best results.</div>
   <li>Read the match reasons and the honest gaps. Interested? Tap
       <b>"Tailor my resume for this job."</b> Your mail app opens a pre-written
       reply — just hit <b>Send</b>.</li>
-  <li>Within the hour, a reply arrives with <code>tailored_resume.docx</code>
+  <li>Within about 10 minutes, a reply arrives with <code>tailored_resume.docx</code>
       attached and a summary of which job requirements it covers (and which it
       honestly doesn't).</li>
   <li><b>Read the resume before using it.</b> It's built only from your real
